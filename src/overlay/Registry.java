@@ -14,28 +14,31 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.StringTokenizer;
 
 
 
-public class Registry {
+public class Registry implements Runnable {
 	
 	private static ServerSocket registryServer; // serversocket that the registry will be using.
 	private static Socket nodeSocket; // socket that the registry will use to communicate between the nodes.
+	private static Socket sendSocket; // socket that will be used to send messages back to MessagingNodes.
+	private static Registry theRegistry; // a copy of the registry we are using.
 	
 	// Pair<String, Integer> is in the form of hostname, portnum for the nodes.
 	private static ArrayList<Pair<String, Integer>> registeredNodes = new ArrayList<Pair<String, Integer>>(); // an array list of the hostname/portnum node Pairs
 	
-
 	// check if any hostnames match the current node's
-	public static boolean matchedHostnames(ArrayList<Pair<String, Integer>> registeredNodes, String hostname)
+	public static boolean matchedIPAddresses(ArrayList<Pair<String, Integer>> registeredNodes, String IPaddr)
 	{
 		boolean matched = false; // if a hostname matches, set to true.
 		
 		// loop through and check all hostnames.
 		for(int i = 0; i < registeredNodes.size(); i++)
 		{
-			if(registeredNodes.get(i).getFirst() == hostname) 
+			if(registeredNodes.get(i).getFirst() == IPaddr) 
 			{
 				matched = true;  // hostnames match.
 			}
@@ -62,7 +65,7 @@ public class Registry {
 	}
 	
 	// checks if a MessagingNode is registered or not.
-	public static boolean isRegistered(int portnum, String hostname)
+	public static boolean isRegistered(int portnum, String IPaddr)
 	{
 		if(registeredNodes.isEmpty())
 		{
@@ -70,7 +73,7 @@ public class Registry {
 		}
 		else
 		{
-			boolean hostnamesMatch = matchedHostnames(registeredNodes, hostname); // returns true if any hostnames match
+			boolean hostnamesMatch = matchedIPAddresses(registeredNodes, IPaddr); // returns true if any hostnames match
 			boolean portnumsMatch = matchedPortnums(registeredNodes, portnum); // returns true if portnums match.
 			
 			if(hostnamesMatch && portnumsMatch == true) // node is already registered.
@@ -84,46 +87,107 @@ public class Registry {
 		}
 	}
 	
-	// nodes sending a registration command are sent here.
-	public static int register(int portnum, String hostname)
+	// this method will start a connection with a MessagingNode and send appropriate messages.
+	public static void send(Socket socket, byte[] messageToSend)
 	{
-		if(isRegistered(portnum, hostname) == false) // check if node is registered.
+		try 
 		{
-			Pair<String, Integer> node = new Pair<String, Integer>(); // create a new node Pair.
-			node.setFirst(hostname); // set the hostname field of the pair.
-			node.setSecond(portnum); // set the portnum field of the pair.
+			TCPSender message = new TCPSender(socket);
+			message.sendData(messageToSend); // send message to the Messaging Node.
 			
-			registeredNodes.add(node); // add new node to Registry
-			return 1; // 1 == success code to the MessagingNode.
+		} catch (IOException e) {
+			System.err.println("Registry caught error: " + e.getMessage());
 		}
-		else
-		{
-			return 0; // 0 == failure code to the MessagingNode, was not registered.
-		}	
 	}
 	
-	// nodes sending deregistration command are sent here.
+	// Messaging nodes sending a registration command are sent here.
+	public static void register(String IPaddr, int portnum)
+	{		
+		boolean nodeRegistered = isRegistered(portnum, IPaddr); // check if MessagingNode is registered or not.
+		
+		if(nodeRegistered == false) // node does not exist, add to registry.
+		{
+			Pair<String, Integer> newMessagingNode = new Pair<String, Integer>();
+			newMessagingNode.setFirst(IPaddr); // set the IP address of the first node.
+			newMessagingNode.setSecond(portnum); // set the second of the second node.
+			registeredNodes.add(newMessagingNode); // add the newMessagingNode into the Registry.
+			
+			try 
+			{
+				sendSocket = new Socket(IPaddr, portnum); // establish connection with MessagingNode.
+				RegistryRegistrationResponseMessage rrrm = new RegistryRegistrationResponseMessage();
+				byte[] responseMessage = rrrm.getSuccessBytes(sendSocket); // get success message.
+				send(sendSocket, responseMessage); // send message to Messaging Node.
+				
+			} catch (UnknownHostException e) {
+				System.err.println("Registry caught error (unknown host): " + e.getMessage());
+			} catch (IOException e) {
+				System.err.println("Registry caught error (IO exception): " + e.getMessage());
+			}
+		}
+		else // the node already exists send the failure message to the MessagingNode.
+		{
+			try 
+			{
+				sendSocket = new Socket(IPaddr, portnum); // establish connection with MessagingNode.
+				RegistryRegistrationResponseMessage rrrm = new RegistryRegistrationResponseMessage();
+				byte[] responseMessage = rrrm.getFailureBytes(sendSocket); // get failure message.
+				send(sendSocket, responseMessage); // send message to MessagingNode.
+				
+			} catch (UnknownHostException e) {
+				System.err.println("Registry caught error (unknown host): " + e.getMessage());
+			} catch (IOException e) {
+				System.err.println("Registry caught error (IO exception): " + e.getMessage());
+			}
+		}
+		
+		// **Note: I need to also check the socket input stream from the messaging node to ensure that they match, if they don't we need to send error message again.
+	}
+	
+	// Messaging nodes sending deregistration requests are sent here.
 	public static int deregister(int portnum, String hostname)
 	{
 		return 0; // change this!
 	}
 	
-	// action requests by Messaging Nodes are sent here in the form of ints.
-	// a code is sent back to the node in the form of an integer detailing if its request was successful or not.
-	public static int NodeRequest(int request, int portnum, String hostname)
+	// handles messages sent to the Registry.
+	public static void NodeRequest(String request, String IPaddr, int portnum)
 	{
-		if(request == 1) // registration request.
+		if(request.equals("REGISTER_REQUEST")) // MessagingNode sends a registration command.
 		{
-			return register(portnum, hostname); // 1 == success, 0 == failure
+			register(IPaddr, portnum); // register the node within the registry.
 		}
-		else if(request == 0) // deregistration request.
+	}
+	
+	// message received from the TCPReceiver will be passed here for processing and sent to NodeRequest.
+	public void TCPmessage(String tcpMessage)
+	{
+		String[] tokens = tcpMessage.split(" "); // split message by spaces.
+		String request = tokens[0]; // token[0] holds the node request.
+		//String hostname = tokens[1]; // token[1] holds the hostname
+		String IPaddr = tokens[1]; // token[1] holds the node's IP address.
+		int portnum = Integer.parseInt(tokens[2]); // token[2] holds the node's port number.
+		
+		// **NOTE: I'm using hostname here instead of IP address, I should fix this b4 turning in project.
+		NodeRequest(request, IPaddr, portnum); // send the request along with the relative information to handled.
+	}
+	
+	// runs when the registry thread starts.
+	public void run()
+	{
+		System.out.println("Accepted connection from Messaging Node: " + nodeSocket); // alert console of successful connection.
+		System.out.println("test 2");
+		Thread messagingNodeThread; // start a new Thread on TCPReceiver to receive messages through clientSocket.
+		try 
 		{
-			return deregister(portnum, hostname); // 1 == success, 0 == failure
-		}
-		else
-		{
-			return -1; // -1 specifies that a node's request was not recognized, handle the error for that case!
-		}
+			messagingNodeThread = new Thread(new TCPReceiver(nodeSocket, theRegistry), "tcpReceiverThread"); // pass a copy of the registry to TCPReceiver.
+			messagingNodeThread.start(); // start receiving messages.				
+			
+		} 
+		catch (IOException e) {
+			System.err.println("messagingNodeThread got error: " + e.getMessage());
+		} 
+
 	}
 	
 	
@@ -132,18 +196,21 @@ public class Registry {
 		
 		try 
 		{
+			theRegistry = new Registry(); // instance of the registry.
+			
 			registryServer = new ServerSocket(9999); // create a server for the registry to communicate through.
 			System.out.println("Registry has started."); 
 			
-			int threadID = 0; // this will allow me to keep track of how many threads are being created.
 			// continue checking for new connections.
 			while(true)
 			{
 				nodeSocket = registryServer.accept(); // accept connections from nodes. Remember code pauses here until a connection has been made.
 				//System.out.println("Accepted connection: " + nodeSocket); 
 				System.out.println("test 1"); // first test to make sure things go smoothely.
-				Thread nodeConnectionThread = new nodeConnectionThread(nodeSocket, ++threadID); // create a new Thread class to handle the node connection.
-				nodeConnectionThread.start(); // start this thread to handle incoming Messaging Nodes.
+				Thread registryThread = new Thread(theRegistry, "registryThread"); // create a registry thread. Should only be one however.
+				registryThread.start();
+				//Thread nodeConnectionThread = new nodeConnectionThread(nodeSocket, ++threadID); // create a new Thread class to handle the node connection.
+				//nodeConnectionThread.start(); // start this thread to handle incoming Messaging Nodes.
 				
 			}
 			

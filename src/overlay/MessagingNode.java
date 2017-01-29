@@ -11,7 +11,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
 
-import wireformat.RegistrationMessage;
+import wireformat.RegistrationRequestMessage;
 import wireformat.WireFormat;
 
 // creates the structure of the messaging nodes.
@@ -35,12 +35,12 @@ public class MessagingNode implements Node {
 	}
 	
 	// this method will be in control of generating the registration message and telling the registry to register the MessagingNode.
-	public static void registerNode(Socket registrySocket, int portNum)
+	public static void registerNode(Socket registrySocket, int portNum, String hostname)
 	{
 		try 
 		{
 			TCPSender registerMe = new TCPSender(registrySocket); // send registry socket to be used to send data to the Registry.
-			RegistrationMessage registerMsg = new RegistrationMessage();
+			RegistrationRequestMessage registerMsg = new RegistrationRequestMessage();
 			byte[] msgBytes = registerMsg.getRegistrationBytes(portNum, registrySocket); // get the marshalled registration msg.
 			registerMe.sendData(msgBytes); // send this registration msg to the registry.
 			
@@ -66,7 +66,7 @@ public class MessagingNode implements Node {
 			System.out.println("test 1");
 			
 			// using registerNode to do all of the registration work.
-			registerNode(registrySocket, portNum); // have messaging node get registered with the Registry.
+			registerNode(registrySocket, portNum, hostname); // have messaging node get registered with the Registry.
 			
 			/*
 			 * This works below to send a message. Commented out to get TCPSender to work.
