@@ -18,6 +18,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
+import wireformat.RegistryRegistrationResponseMessage;
+
 
 
 public class Registry implements Runnable {
@@ -164,11 +166,8 @@ public class Registry implements Runnable {
 	{
 		String[] tokens = tcpMessage.split(" "); // split message by spaces.
 		String request = tokens[0]; // token[0] holds the node request.
-		//String hostname = tokens[1]; // token[1] holds the hostname
 		String IPaddr = tokens[1]; // token[1] holds the node's IP address.
 		int portnum = Integer.parseInt(tokens[2]); // token[2] holds the node's port number.
-		
-		// **NOTE: I'm using hostname here instead of IP address, I should fix this b4 turning in project.
 		NodeRequest(request, IPaddr, portnum); // send the request along with the relative information to handled.
 	}
 	
@@ -176,23 +175,21 @@ public class Registry implements Runnable {
 	public void run()
 	{
 		System.out.println("Accepted connection from Messaging Node: " + nodeSocket); // alert console of successful connection.
-		System.out.println("test 2");
 		Thread messagingNodeThread; // start a new Thread on TCPReceiver to receive messages through clientSocket.
 		try 
 		{
 			messagingNodeThread = new Thread(new TCPReceiver(nodeSocket, theRegistry), "tcpReceiverThread"); // pass a copy of the registry to TCPReceiver.
-			messagingNodeThread.start(); // start receiving messages.				
-			
+			messagingNodeThread.start(); // start receiving messages.					
 		} 
 		catch (IOException e) {
 			System.err.println("messagingNodeThread got error: " + e.getMessage());
 		} 
-
 	}
 	
 	
 	public static void main(String[] args) {
-		// note: may want to add a thread within the registry to listen for commands.
+		
+		// **note: may want to add a thread within the registry to listen for commands.
 		
 		try 
 		{
@@ -201,62 +198,12 @@ public class Registry implements Runnable {
 			registryServer = new ServerSocket(9999); // create a server for the registry to communicate through.
 			System.out.println("Registry has started."); 
 			
-			// continue checking for new connections.
-			while(true)
+			while(true) // continue checking for new connections.
 			{
 				nodeSocket = registryServer.accept(); // accept connections from nodes. Remember code pauses here until a connection has been made.
-				//System.out.println("Accepted connection: " + nodeSocket); 
-				System.out.println("test 1"); // first test to make sure things go smoothely.
-				Thread registryThread = new Thread(theRegistry, "registryThread"); // create a registry thread. Should only be one however.
-				registryThread.start();
-				//Thread nodeConnectionThread = new nodeConnectionThread(nodeSocket, ++threadID); // create a new Thread class to handle the node connection.
-				//nodeConnectionThread.start(); // start this thread to handle incoming Messaging Nodes.
-				
+				Thread registryThread = new Thread(theRegistry, "Registry_Thread"); // create a registry thread. Should only be one however.
+				registryThread.start(); // start thread to start receiving messages.
 			}
-			
-			/*
-			// this is throwing an error.
-			// just try to get some nodes communicating. This is very important!
-			Thread messagingThread = new Thread(new TCPReceiver(nodeSocket));
-			messagingThread.start(); // start the thread.
-			System.out.println("test 3");
-			
-			TCPSender sendToNode = new TCPSender(nodeSocket); // sending a message to a node.
-			byte[] msg = "hello node".getBytes(); // create a byte array to send to node.
-			sendToNode.sendData(msg); // send message to the connected node.
-			*/
-			
-			//InputStreamReader inputstreamreader = new InputStreamReader(nodeSocket.getInputStream());
-		    //BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
-		    
-		   // String nodeMsg = ""; // message read from node.
-		   // Integer nodePortNum = 0; // holds the port number of the connected messaging node.
-		    
-		    // Using TCPReciever now!
-		    // ** Note ** I must make the registry a threaded server to handle multiple connections from different MessagingNodes
-		    
-		    /*
-		    // read from MessagingNode.
-		    while((nodeMsg = bufferedreader.readLine()) != null)
-		    {
-		    	System.out.println("Node says: " + nodeMsg);
-		    	nodePortNum = Integer.parseInt(nodeMsg);
-		    }
-		    */
-		    
-		    // will want to use TCPSender here.
-		    // send message back to MessagingNode
-		   // Socket sendSocket = new Socket("zatanna", nodePortNum); // use the portnum to establish a connection with the messaging node.
-		    
-		    // should be using TCPSender here.
-		   // PrintWriter writeOut = new PrintWriter(sendSocket.getOutputStream(), true);
-			//writeOut.println("Hello Messaging node we almost completed milestone!"); // send the registry the port number we are working with.
-			
-			
-			//writeOut.close(); // close the printWriter.
-		   // bufferedreader.close(); // close the bufferedreader.
-		   // inputstreamreader.close(); // close the inputstreamreader
-		   // nodeSocket.close(); // close the node socket.
 			
 		} catch (Exception e) {
 			System.err.println("Registry caught error: " + e.getMessage());

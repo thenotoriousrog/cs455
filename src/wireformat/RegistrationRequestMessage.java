@@ -17,8 +17,6 @@ public class RegistrationRequestMessage {
 		DataOutputStream dataOutput = new DataOutputStream(new BufferedOutputStream(baOutStream));
 		
 		dataOutput.writeBytes("REGISTER_REQUEST "); // ask the registry to register the node.
-		//dataOutput.writeBytes(hostname + " "); // add the hostname as well for the sake of connecting back to the messaging node.
-		//dataOutput.writeBytes(nodeSocket.getInetAddress().toString() + " "); // write the ip address of the MessagingNode.
 		dataOutput.writeBytes(nodeSocket.getInetAddress().getHostAddress() + " ");
 		
 		String convertedPortnum = Integer.toString(portnum); // convert the portnum into a string to send to TCPReceiver.

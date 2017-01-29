@@ -1,4 +1,4 @@
-package overlay;
+package wireformat;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
