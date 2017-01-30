@@ -8,6 +8,12 @@ import java.net.Socket;
 
 public class RegistryRegistrationResponseMessage {
 
+	private int overlaySize = 0; // holds the number of messaging nodes currently in overlay.
+	
+	public RegistryRegistrationResponseMessage(int currentOverlaySize)
+	{
+		overlaySize = currentOverlaySize; // set the size of the overlay size.
+	}
 	
 	// marshals the response message. 1 = successful registration
 	public byte[] getSuccessBytes(Socket nodeSocket) throws IOException
@@ -18,7 +24,7 @@ public class RegistryRegistrationResponseMessage {
 		dataOutput.writeBytes("REGISTER_RESPONSE "); // ask the registry to register the node.
 		String statusByte = Integer.toString(1); 
 		dataOutput.writeBytes(statusByte + " "); // Success code is 1 when node is successfully registered.	May need to convert to string first.
-		dataOutput.writeBytes("Messaging Node was added to the Registry."); // Additional info can edit later.
+		dataOutput.writeBytes("Messaging Node was added to the Registry. Current nodes in overlay are (" + overlaySize + ")."); // Additional info can edit later.
 			
 		// clean up
 		dataOutput.flush(); // flush the stream.

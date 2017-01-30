@@ -117,7 +117,7 @@ public class Registry implements Runnable {
 			try 
 			{
 				sendSocket = new Socket(IPaddr, portnum); // establish connection with MessagingNode.
-				RegistryRegistrationResponseMessage rrrm = new RegistryRegistrationResponseMessage();
+				RegistryRegistrationResponseMessage rrrm = new RegistryRegistrationResponseMessage(registeredNodes.size());
 				byte[] responseMessage = rrrm.getSuccessBytes(sendSocket); // get success message.
 				send(sendSocket, responseMessage); // send message to Messaging Node.
 				
@@ -132,7 +132,7 @@ public class Registry implements Runnable {
 			try 
 			{
 				sendSocket = new Socket(IPaddr, portnum); // establish connection with MessagingNode.
-				RegistryRegistrationResponseMessage rrrm = new RegistryRegistrationResponseMessage();
+				RegistryRegistrationResponseMessage rrrm = new RegistryRegistrationResponseMessage(registeredNodes.size());
 				byte[] responseMessage = rrrm.getFailureBytes(sendSocket); // get failure message.
 				send(sendSocket, responseMessage); // send message to MessagingNode.
 				
@@ -147,9 +147,23 @@ public class Registry implements Runnable {
 	}
 	
 	// Messaging nodes sending deregistration requests are sent here.
-	public static int deregister(int portnum, String hostname)
+	public static void deregister(String IPaddr, int portnum)
 	{
-		return 0; // change this!
+		boolean nodeExists = isRegistered(portnum, IPaddr); // check if node is within registry.
+		if(nodeExists == true)
+		{
+			for(int i = 0; i < registeredNodes.size(); i++)
+			{
+				if( (registeredNodes.get(i).getFirst().equals(IPaddr)) && (registeredNodes.get(i).getSecond() == portnum))
+				{
+					registeredNodes.remove(i); // remove the node from the registry.
+				}
+			}
+		}
+		else
+		{
+			System.out.println("NODE DOES NOT EXIST"); // remove this later.
+		}
 	}
 	
 	// handles messages sent to the Registry.
@@ -158,6 +172,10 @@ public class Registry implements Runnable {
 		if(request.equals("REGISTER_REQUEST")) // MessagingNode sends a registration command.
 		{
 			register(IPaddr, portnum); // register the node within the registry.
+		}
+		else if(request.equals("DEREGISTER_REQUEST"))
+		{
+			deregister(IPaddr, portnum); // remove the node from the registry. Node should send final report to registry as well before full disconnection.
 		}
 	}
 	
@@ -197,6 +215,10 @@ public class Registry implements Runnable {
 			
 			registryServer = new ServerSocket(9999); // create a server for the registry to communicate through.
 			System.out.println("Registry has started."); 
+			
+			// start a thread for listening for user input.
+			Thread userInputThread = new Thread(new RegistryUserInput(theRegistry), "Registry_User_Input_Thread"); // create thread for user input.
+			userInputThread.start(); // start the thread.
 			
 			while(true) // continue checking for new connections.
 			{

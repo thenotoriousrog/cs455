@@ -84,9 +84,6 @@ public class MessagingNode implements Node, Runnable {
 			hostname = ip.getHostName();
 			portNum = serverSocket.getLocalPort(); // assign the port number that was assigned to serverSocket.
 			
-			// register within the Registry
-			
-			// using registerNode to do all of the registration work.
 			registerNode(registrySocket, portNum, hostname); // have messaging node get registered with the Registry.
 			
 			System.out.println("Messaging node started on port " + portNum + " with hostname " + hostname); // alert that a node was started to the console.
@@ -95,6 +92,10 @@ public class MessagingNode implements Node, Runnable {
 			System.err.println("port " + portNum + " is already in use");
 			System.exit(1);
 		}
+		
+		// start a thread for listening for user input.
+		Thread userInputThread = new Thread(new NodeUserInput(messagingNode), "Node_User_Input_Thread"); // create thread for taking in user input.
+		userInputThread.start(); // start listening for user input.
 		
 		while(true) // accept connections and communications.
 		{
