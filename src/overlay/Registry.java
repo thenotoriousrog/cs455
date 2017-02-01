@@ -18,6 +18,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
+import Graph.Graph;
+import Graph.Vertex;
 import wireformat.RegistryRegistrationResponseMessage;
 
 
@@ -28,6 +30,8 @@ public class Registry implements Runnable {
 	private static Socket nodeSocket; // socket that the registry will use to communicate between the nodes.
 	private static Socket sendSocket; // socket that will be used to send messages back to MessagingNodes.
 	private static Registry theRegistry; // a copy of the registry we are using.
+	private static Graph Overlay; // the Graph that holds the overlay.  
+	private static Vertex newVertex; // Vertex that we will add to the overlay.
 	
 	// Pair<String, Integer> is in the form of hostname, portnum for the nodes.
 	private static ArrayList<Pair<String, Integer>> registeredNodes = new ArrayList<Pair<String, Integer>>(); // an array list of the hostname/portnum node Pairs
@@ -112,7 +116,12 @@ public class Registry implements Runnable {
 			Pair<String, Integer> newMessagingNode = new Pair<String, Integer>();
 			newMessagingNode.setFirst(IPaddr); // set the IP address of the first node.
 			newMessagingNode.setSecond(portnum); // set the second of the second node.
-			registeredNodes.add(newMessagingNode); // add the newMessagingNode into the Registry.
+			registeredNodes.add(newMessagingNode); // add the newMessagingNode into list of registered nodes.
+			
+			// add the new node into the graph.
+			Overlay = new Graph();
+			newVertex = new Vertex(newMessagingNode); // create a new vertex.
+			Overlay.addVertex(newVertex); // add vertex to the overlay.
 			
 			try 
 			{
@@ -156,7 +165,9 @@ public class Registry implements Runnable {
 			{
 				if( (registeredNodes.get(i).getFirst().equals(IPaddr)) && (registeredNodes.get(i).getSecond() == portnum))
 				{
-					registeredNodes.remove(i); // remove the node from the registry.
+					String portnumber = newVertex.convertToString(registeredNodes.get(i).getSecond()); // convert portnum to string to find vertex.
+					Overlay.removeVertex(portnumber); // finds the vertex with this portnumber and remove it from the Overlay. 
+					registeredNodes.remove(i); // remove the node from the registry list.
 				}
 			}
 		}
