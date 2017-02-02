@@ -16,8 +16,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.StringTokenizer;
 
+import Graph.Dijkstra;
+import Graph.Edge;
 import Graph.Graph;
 import Graph.Vertex;
 import wireformat.MessagingNodesListMessage;
@@ -125,18 +128,12 @@ public class Registry implements Runnable {
 			//Overlay = new Graph();
 			newVertex = new Vertex(newMessagingNode); // create a new vertex.
 			vertices.add(newVertex); // add vertex into the vertices list.
-			Overlay = new Graph(vertices); // create the new graph with the vertices list, which automatically populates the Graph!
+			//Overlay = new Graph(vertices); // create the new graph with the vertices list, which automatically populates the Graph!
 			//Overlay.addVertex(newVertex); // add vertex to the overlay.
 			
 			// by having having a vertices list it will really help with creating the topological sort.
 			// test the topological sort out by doing it each time a node registers.
-			ArrayList<Vertex> sortVertices = Overlay.topologicalSort(vertices, Overlay); // get the topological sort of all vertices. 
 			
-			// get the topologically sorted vertices and print out their port numbers.
-			for(int i = 0; i < sortVertices.size(); i++)
-			{
-				System.out.println("Messaging Node (vertex) " + (i+1) + " is: " + sortVertices.get(i).getVertexPortNum()); // print out the vertex and it's port num.
-			}
 			
 			try 
 			{
@@ -225,13 +222,82 @@ public class Registry implements Runnable {
 		NodeRequest(request, IPaddr, portnum); // send the request along with the relative information to handled.
 	}
 	
+	// This will create edges between the created vertices and will assign weights in the process of doing that.
+	public void buildEdgesandWeights(ArrayList<Vertex> vertices)
+	{
+		Random rn = new Random();
+		int weight = 0; // holds weight of an edge.
+		
+		System.out.println("there are " + vertices.size() + " vertices currently in the registry"); // for testing.
+		// for each vertex assign an edge along with a randomized weight.
+		for(int i = 0; i < vertices.size() - 1; i++)
+		{
+			for(int j = i + 1; j < vertices.size(); j++)
+			{
+				System.out.println("test");
+				// assign an edge to each vertex to make it truly undirected. 
+				weight = rn.nextInt(10) + 1; // new weight
+				System.out.println("vertex 1: " + vertices.get(i).getVertexPortNum());
+				System.out.println("vertex 2: " + vertices.get(j).getVertexPortNum());
+				
+				Overlay.addEdge(vertices.get(i), vertices.get(j) , weight); // fill left side of vertex i
+				System.out.println("Vertex(portnum): " + vertices.get(i).getVertexPortNum() + " and Vertex(portnum): " 
+						+ vertices.get(j).getVertexPortNum() + " has weight " + weight); // for testing purposes
+				
+				weight = rn.nextInt(10) + 1; // new weight
+				Overlay.addEdge(vertices.get(i), vertices.get(j) , weight); // fill right side of vertex i
+				System.out.println("Vertex(portnum): " + vertices.get(i).getVertexPortNum() + " and Vertex(portnum): " 
+						+ vertices.get(j).getVertexPortNum() + " has weight " + weight); // for testing purposes
+				
+				weight = rn.nextInt(10) + 1; // new weight
+				Overlay.addEdge(vertices.get(j), vertices.get(i) , weight); // fill vertex j.
+				System.out.println("Vertex(portnum): " + vertices.get(i).getVertexPortNum() + " and Vertex(portnum): " 
+						+ vertices.get(j).getVertexPortNum() + " has weight " + weight); // for testing purposes
+			}
+		}
+	}
+	
 	// takes in a split string array for the command. Important to note what is going on here.
 	public void userCommand(String[] command)
 	{
-		if(command[1].equalsIgnoreCase("setup-overlay")) // this should trigger dijkstra's algorithm
+		if(command[0].equalsIgnoreCase("setup-overlay")) // this should trigger dijkstra's algorithm
 		{	
-			int numOfConnections = Integer.parseInt(command[2]); // get the number of connections user is requesting.
-			MessagingNodesListMessage setupMsg = new MessagingNodesListMessage();
+			int numOfConnections = Integer.parseInt(command[1]); // get the number of connections user is requesting.
+			
+			// messaging nodes will connect to nodes: node+1, node+2, node-1, node-2.
+			// first node will connect to node+1, node+2, and last node, and second to last node.
+			// modify messaging node list class accordingly.
+			
+			MessagingNodesListMessage setupMsg = new MessagingNodesListMessage(); // this class must be edited!
+			
+			// since we received the setup-overlay command we must build the graph along with the edges.
+			Overlay = new Graph(vertices); // now that we have edges and vertices we can now build the overlay.
+			buildEdgesandWeights(vertices); // build the edges with weights to all the vertices.
+			
+			
+			ArrayList<Vertex> sortedVertices = Overlay.topologicalSort(vertices, Overlay); // get the topological sort of all vertices. 
+			
+			System.out.println("There are " + sortedVertices.size() + " vertices in the overlay.");
+			Dijkstra d = new Dijkstra(Overlay, sortedVertices.get(0).getVertexPortNum()); // takes in the overlay and the first graph in the list.
+			
+			for(int i = 0; i < sortedVertices.size(); i++)
+			{
+				// get distance to each vertex in the sorted list. 
+				// print this distance out for testing.
+				System.out.println("distance to vertex " + (i+1) + " is " + d.getDistanceTo(sortedVertices.get(i).getVertexPortNum())); 
+			}
+			
+			
+			/*
+			// print the topological sort for testing to make sure it is correct.
+			for(int i = 0; i < sortVertices.size(); i++)
+			{
+				System.out.println("Messaging Node (vertex) " + (i+1) + " is: " + sortVertices.get(i).getVertexPortNum()); // print out the vertex and it's port num.
+			}
+			*/
+			
+			
+			
 			
 			try 
 			{

@@ -26,12 +26,12 @@ public class Vertex {
 	// adds a vertex to the graph.
 	public void addSquadMember(Edge edge)
 	{
-		if(squad.contains(edge))
+		if(this.squad.contains(edge))
 		{
 			return; // do not do anything, this edge already exists.
 		}
 		
-		squad.add(edge); // add an edge between two squad mates.
+		this.squad.add(edge); // add an edge between two squad mates.
 	}
 	
 	// the index of the edge to get. See if the edge exists at that index.
@@ -43,7 +43,7 @@ public class Vertex {
 	// gets the squad mate indicated at index.
 	public Edge getSquadMember(int index)
 	{
-		return squad.get(index); // return this squad mate.
+		return this.squad.get(index); // return this squad mate.
 	}
 	
 	// removes a squad member.

@@ -137,7 +137,7 @@ public class Dijkstra {
     }
     
     
-    // get distance from initial vertex.
+    // get distance from initial vertex. is this the weight?
     public int getDistanceTo(int targetVertexPortNum)
     {
         return this.distances.get(convertToString(targetVertexPortNum)); // have to use the string version of the integer.

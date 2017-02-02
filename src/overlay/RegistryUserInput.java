@@ -21,10 +21,11 @@ public class RegistryUserInput extends Thread {
 		String command = ""; // holds command from user.
 		while(true) // continue while Registry is connected.
 		{
-			command = input.next(); // get a command from user.
+			command = input.nextLine(); // get a command from user.
 			String[] splitCommand = command.split(" "); // split message based on spaces.
 			// send the command off to be handled by the Registry.
 			System.out.println("user wrote: " + command); // display the command for now, this will eventually go back to the Registry!
+			registry.userCommand(splitCommand); // send command off to the registry.
 		}
 	}
 	

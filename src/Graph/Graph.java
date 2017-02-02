@@ -35,8 +35,7 @@ public class Graph {
         for(Vertex v: vertices)
         {
             this.vertices.put(v.convertToString(v.getVertexPortNum()), v); // converts portnum to string. This is the vertex ID if you will.
-        }
-        
+        }    
     }
     
     // adds an edge between a vertex and an edge.
@@ -48,13 +47,14 @@ public class Graph {
     // checks two vertices and a weight, then will return true if the edge does not exist.
     public boolean addEdge(Vertex one, Vertex two, int weight)
     {
+    	System.out.println("trying to add edge now.");
         if(one.equals(two))
         {
             return false;   
         }
        
-        //ensures the Edge is not in the Graph
-        Edge e = new Edge(one, two, weight);
+        // ensures the Edge is not in the Graph
+        Edge e = new Edge(one, two, weight); // weight is being set here.
         if(edges.containsKey(e.hashCode()))
         {
             return false;
@@ -152,7 +152,8 @@ public class Graph {
     }
     
     // gets all edges of the graph.
-    public Set<Edge> getEdges(){
+    public Set<Edge> getEdges()
+    {
         return new HashSet<Edge>(this.edges.values());
     }
     
@@ -163,8 +164,6 @@ public class Graph {
     	HashMap<Vertex, Integer> map = new HashMap<Vertex, Integer>();
     	
     	// calculate in degree of all vertices.
-    	// this will work because graph has a complete set of all vertices that Vertex.java uses and is updated frequently.
-    	//ArrayList<Pair<String, Integer>> vertices = graph.vertices.get(0).getVertexList(); // get the whole vertex list.
     	
     	ArrayList<Edge> squad = new ArrayList<Edge>();
     	squad = vertices.get(0).getSquad(); // gets neighbors // getsquadmember() gets a vertex.
@@ -179,7 +178,11 @@ public class Graph {
     		for(int j = 0; j < squad.size(); j++)
     		{
     			// getting j edges that exist on vertex i, then finding neighbor vertices on vertex i.
-    			Vertex neighbor = graph.edges.get(i).getNeighbor(vertices.get(i)); // neighbor vertex.
+    			
+    			// problem lies right here. Need to figure out how to get the neighboring vertices.
+    			Vertex neighbor = graph.edges.get(j).getNeighbor(vertices.get(i)); // neighbor vertex.
+    			//Vertex neightbor = graph.edges.get(key)
+    			
     			if(map.containsKey(neighbor))
     			{
     				map.put(neighbor, map.get(neighbor) + 1); // assign into the map.
