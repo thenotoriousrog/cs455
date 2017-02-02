@@ -3,19 +3,29 @@ package Graph;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Set;
+
+import overlay.Pair;
 
 public class Graph {
     
     private HashMap<String, Vertex> vertices;
     private HashMap<Integer, Edge> edges;
     
-    public Graph(){
-        this.vertices = new HashMap<String, Vertex>();
+    public Graph()
+    {
+        this.vertices = new HashMap<String, Vertex>(); // String holds the port number identified with each vertex.
         this.edges = new HashMap<Integer, Edge>();
     }
     
-
+    // converts an int to a string.
+ 	public String convertToString(int anInt)
+ 	{
+ 		return Integer.toString(anInt); // return String version of the portnumber.
+ 	}
+    
     // populates arraylist with vertices.
     public Graph(ArrayList<Vertex> vertices){
         
@@ -146,4 +156,70 @@ public class Graph {
         return new HashSet<Edge>(this.edges.values());
     }
     
+    // creates a topological sort and sends back the sorted ArrayList to the caller of this method.
+    public ArrayList<Vertex> topologicalSort(ArrayList<Vertex> vertices, Graph graph)
+    {
+    	ArrayList<Vertex> result = new ArrayList<Vertex>(); // result of our topological sort
+    	HashMap<Vertex, Integer> map = new HashMap<Vertex, Integer>();
+    	
+    	// calculate in degree of all vertices.
+    	// this will work because graph has a complete set of all vertices that Vertex.java uses and is updated frequently.
+    	//ArrayList<Pair<String, Integer>> vertices = graph.vertices.get(0).getVertexList(); // get the whole vertex list.
+    	
+    	ArrayList<Edge> squad = new ArrayList<Edge>();
+    	squad = vertices.get(0).getSquad(); // gets neighbors // getsquadmember() gets a vertex.
+    	
+    	// sort through all vertices and check indegree of each.
+    	for(int i = 0; i < vertices.size(); i++)
+    	{
+    		// It is important to sort through each vertex and find neighbors. 
+    		// that is what we are trying to do below is grab each vertex and find it's corresponding neighbors.
+    		
+    		// sort through each edge looking for neighbors of the current vertex.
+    		for(int j = 0; j < squad.size(); j++)
+    		{
+    			// getting j edges that exist on vertex i, then finding neighbor vertices on vertex i.
+    			Vertex neighbor = graph.edges.get(i).getNeighbor(vertices.get(i)); // neighbor vertex.
+    			if(map.containsKey(neighbor))
+    			{
+    				map.put(neighbor, map.get(neighbor) + 1); // assign into the map.
+    			}
+    			else
+    			{
+    				map.put(neighbor, 1);
+    			}
+    		}
+    	}	
+    	
+    	Queue<Vertex> queue = new LinkedList<Vertex>(); // queue to hold our vertices in topological order.
+		
+		// now need to find nodes with indegree 0 i.e. meaning vertices with no incoming edges.
+		for(int i = 0; i < vertices.size(); i++)
+		{
+			if(!map.containsKey(vertices.get(i))) // check each vertex in the map and see if it has any edges.
+			{
+				queue.offer(vertices.get(i)); // add vertex into the queue.
+				result.add(vertices.get(i)); // add vertex into our result first as these do not have any incoming edges.
+			}
+		}
+		
+		// now we search through the other nodes using BFS.
+		while(!queue.isEmpty())
+		{
+			Vertex v = queue.poll(); // gets the next vertex from head of the queue.
+			
+			for(int i = 0; i < squad.size(); i++) // squad has list of all neighbors and can easily get the neighbor vertex, see loops above.
+			{
+				Vertex neighbor = graph.edges.get(i).getNeighbor(v);
+				map.put(neighbor, map.get(neighbor) - 1);
+				if(map.get(neighbor) == 0)
+				{
+					queue.offer(neighbor);
+					result.add(neighbor); // add result into our topological sort.
+				}
+			}
+		}
+    	
+		return result; // send the result back to the caller.
+    }  
 }

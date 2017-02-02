@@ -94,7 +94,7 @@ public class Vertex {
 	}
 	
 	// creates a copy of the current squad. The advantage is that this can be modified without harming the original.
-	public ArrayList<Edge> getSquad()
+	public ArrayList<Edge> getSquad() // essentially this is getting the neighbors of the vertex.
 	{
 		return new ArrayList<Edge>(this.squad); // create a copy of the ArrayList
 	}

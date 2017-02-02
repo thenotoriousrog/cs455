@@ -20,6 +20,7 @@ import java.util.StringTokenizer;
 
 import Graph.Graph;
 import Graph.Vertex;
+import wireformat.MessagingNodesListMessage;
 import wireformat.RegistryRegistrationResponseMessage;
 
 
@@ -32,6 +33,7 @@ public class Registry implements Runnable {
 	private static Registry theRegistry; // a copy of the registry we are using.
 	private static Graph Overlay; // the Graph that holds the overlay.  
 	private static Vertex newVertex; // Vertex that we will add to the overlay.
+	private static ArrayList<Vertex> vertices = new ArrayList<Vertex>(); // holds list of vertices that are being registered.
 	
 	// Pair<String, Integer> is in the form of hostname, portnum for the nodes.
 	private static ArrayList<Pair<String, Integer>> registeredNodes = new ArrayList<Pair<String, Integer>>(); // an array list of the hostname/portnum node Pairs
@@ -118,10 +120,23 @@ public class Registry implements Runnable {
 			newMessagingNode.setSecond(portnum); // set the second of the second node.
 			registeredNodes.add(newMessagingNode); // add the newMessagingNode into list of registered nodes.
 			
-			// add the new node into the graph.
-			Overlay = new Graph();
+			// add the new node into the vertices
+			
+			//Overlay = new Graph();
 			newVertex = new Vertex(newMessagingNode); // create a new vertex.
-			Overlay.addVertex(newVertex); // add vertex to the overlay.
+			vertices.add(newVertex); // add vertex into the vertices list.
+			Overlay = new Graph(vertices); // create the new graph with the vertices list, which automatically populates the Graph!
+			//Overlay.addVertex(newVertex); // add vertex to the overlay.
+			
+			// by having having a vertices list it will really help with creating the topological sort.
+			// test the topological sort out by doing it each time a node registers.
+			ArrayList<Vertex> sortVertices = Overlay.topologicalSort(vertices, Overlay); // get the topological sort of all vertices. 
+			
+			// get the topologically sorted vertices and print out their port numbers.
+			for(int i = 0; i < sortVertices.size(); i++)
+			{
+				System.out.println("Messaging Node (vertex) " + (i+1) + " is: " + sortVertices.get(i).getVertexPortNum()); // print out the vertex and it's port num.
+			}
 			
 			try 
 			{
@@ -153,6 +168,16 @@ public class Registry implements Runnable {
 		}
 		
 		// **Note: I need to also check the socket input stream from the messaging node to ensure that they match, if they don't we need to send error message again.
+	}
+	
+	// this method will send a message to all messaging nodes registered in the Registry. 
+	public void sendToAllNodes(ArrayList<Pair<String, Integer>> nodes, byte[] msgToSend)
+	{
+		// loop through all registered nodes.
+		for(int i = 0; i < nodes.size(); i++)
+		{
+			
+		}
 	}
 	
 	// Messaging nodes sending deregistration requests are sent here.
@@ -200,6 +225,26 @@ public class Registry implements Runnable {
 		NodeRequest(request, IPaddr, portnum); // send the request along with the relative information to handled.
 	}
 	
+	// takes in a split string array for the command. Important to note what is going on here.
+	public void userCommand(String[] command)
+	{
+		if(command[1].equalsIgnoreCase("setup-overlay")) // this should trigger dijkstra's algorithm
+		{	
+			int numOfConnections = Integer.parseInt(command[2]); // get the number of connections user is requesting.
+			MessagingNodesListMessage setupMsg = new MessagingNodesListMessage();
+			
+			try 
+			{
+				// need to modify this message here!!
+				byte[] msgToSend = setupMsg.getNodeListBytes(registeredNodes, numOfConnections); // get the full messaging nodes list message.
+				// WORKING RIGHT HERE!!!!
+			} 
+			catch (IOException e) {
+				System.err.println("Registry caught error: " + e.getMessage()); // print the error.
+			}
+			
+		}
+	}
 	// runs when the registry thread starts.
 	public void run()
 	{
@@ -217,9 +262,7 @@ public class Registry implements Runnable {
 	
 	
 	public static void main(String[] args) {
-		
-		// **note: may want to add a thread within the registry to listen for commands.
-		
+				
 		try 
 		{
 			theRegistry = new Registry(); // instance of the registry.

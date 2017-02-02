@@ -13,6 +13,7 @@ public class RegistryUserInput extends Thread {
 		registry = REGISTRY; // initialize registry instance.
 	}
 	
+	
 	// thread starts running and is in control of listening to added user input.
 	public void run()
 	{
@@ -21,6 +22,8 @@ public class RegistryUserInput extends Thread {
 		while(true) // continue while Registry is connected.
 		{
 			command = input.next(); // get a command from user.
+			String[] splitCommand = command.split(" "); // split message based on spaces.
+			// send the command off to be handled by the Registry.
 			System.out.println("user wrote: " + command); // display the command for now, this will eventually go back to the Registry!
 		}
 	}
