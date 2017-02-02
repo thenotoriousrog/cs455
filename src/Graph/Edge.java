@@ -59,6 +59,12 @@ public class Edge implements Comparable<Edge> {
 		return this.two; // return this vertex.
 	}
 	
+	// gets the weight of the edge
+	public int getWeight()
+	{
+		return this.weight;
+	}
+	
 	// sets the new weight of the edge.
 	public void setWeight(int weight)
 	{

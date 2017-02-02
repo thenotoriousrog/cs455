@@ -88,7 +88,8 @@ public class Graph {
     }
     
     // gets vertex from the graph.
-    public Vertex getVertex(String vertexPortnum){
+    public Vertex getVertex(String vertexPortnum)
+    {
         return vertices.get(vertexPortnum);
     }
     

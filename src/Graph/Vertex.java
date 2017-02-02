@@ -9,11 +9,18 @@ public class Vertex {
 
 	private ArrayList<Edge> squad; // vertex neighbors.
 	private Pair<String, Integer> vertex; // node that is being placed as a vertex.
+	private ArrayList<Pair<String, Integer>> vertexList = new ArrayList<Pair<String, Integer>>(); // holds a list of vertices.
 	
 	public Vertex(Pair<String, Integer> newNode)
 	{
-		vertex = newNode; // set the name of the messaging node.
-		this.squad = new ArrayList<Edge>(); // holds all edges within the squad.
+		vertex = newNode; // create a new vertex.
+		vertexList.add(vertex); // add a new vertex to the list.
+		this.squad = new ArrayList<Edge>(); // holds all edges within the squad
+	}
+	
+	public ArrayList<Pair<String, Integer>> getVertexList()
+	{
+		return vertexList; // return the current vertex list.
 	}
 	
 	// adds a vertex to the graph.
