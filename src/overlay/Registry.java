@@ -37,6 +37,7 @@ public class Registry implements Runnable {
 	private static Graph Overlay; // the Graph that holds the overlay.  
 	private static Vertex newVertex; // Vertex that we will add to the overlay.
 	private static ArrayList<Vertex> vertices = new ArrayList<Vertex>(); // holds list of vertices that are being registered.
+	private static ArrayList<Socket> nodeSockets = new ArrayList<Socket>(); // holds all nodes that are registered in the registry.
 	
 	// Pair<String, Integer> is in the form of hostname, portnum for the nodes.
 	private static ArrayList<Pair<String, Integer>> registeredNodes = new ArrayList<Pair<String, Integer>>(); // an array list of the hostname/portnum node Pairs
@@ -138,6 +139,7 @@ public class Registry implements Runnable {
 			try 
 			{
 				sendSocket = new Socket(IPaddr, portnum); // establish connection with MessagingNode.
+				nodeSockets.add(sendSocket); // add socket to the node socket list.
 				RegistryRegistrationResponseMessage rrrm = new RegistryRegistrationResponseMessage(registeredNodes.size());
 				byte[] responseMessage = rrrm.getSuccessBytes(sendSocket); // get success message.
 				send(sendSocket, responseMessage); // send message to Messaging Node.
@@ -165,16 +167,6 @@ public class Registry implements Runnable {
 		}
 		
 		// **Note: I need to also check the socket input stream from the messaging node to ensure that they match, if they don't we need to send error message again.
-	}
-	
-	// this method will send a message to all messaging nodes registered in the Registry. 
-	public void sendToAllNodes(ArrayList<Pair<String, Integer>> nodes, byte[] msgToSend)
-	{
-		// loop through all registered nodes.
-		for(int i = 0; i < nodes.size(); i++)
-		{
-			
-		}
 	}
 	
 	// Messaging nodes sending deregistration requests are sent here.
@@ -251,8 +243,8 @@ public class Registry implements Runnable {
 				
 				weight = rn.nextInt(10) + 1; // new weight
 				Overlay.addEdge(vertices.get(j), vertices.get(i) , weight); // fill vertex j.
-				System.out.println("Vertex(portnum): " + vertices.get(i).getVertexPortNum() + " and Vertex(portnum): " 
-						+ vertices.get(j).getVertexPortNum() + " has weight " + weight); // for testing purposes
+				System.out.println("Vertex(portnum): " + vertices.get(j).getVertexPortNum() + " and Vertex(portnum): " 
+						+ vertices.get(i).getVertexPortNum() + " has weight " + weight); // for testing purposes
 			}
 		}
 	}
@@ -264,51 +256,33 @@ public class Registry implements Runnable {
 		{	
 			int numOfConnections = Integer.parseInt(command[1]); // get the number of connections user is requesting.
 			
-			// messaging nodes will connect to nodes: node+1, node+2, node-1, node-2.
-			// first node will connect to node+1, node+2, and last node, and second to last node.
-			// modify messaging node list class accordingly.
-			
 			MessagingNodesListMessage setupMsg = new MessagingNodesListMessage(); // this class must be edited!
 			
 			// since we received the setup-overlay command we must build the graph along with the edges.
 			Overlay = new Graph(vertices); // now that we have edges and vertices we can now build the overlay.
 			buildEdgesandWeights(vertices); // build the edges with weights to all the vertices.
+				
+			//System.out.println("There are " + sortedVertices.size() + " vertices in the overlay.");
+			Dijkstra d = new Dijkstra(Overlay, vertices.get(0).getVertexPortNum()); // takes in the overlay and the first graph in the list.
 			
-			
-			ArrayList<Vertex> sortedVertices = Overlay.topologicalSort(vertices, Overlay); // get the topological sort of all vertices. 
-			
-			System.out.println("There are " + sortedVertices.size() + " vertices in the overlay.");
-			Dijkstra d = new Dijkstra(Overlay, sortedVertices.get(0).getVertexPortNum()); // takes in the overlay and the first graph in the list.
-			
-			for(int i = 0; i < sortedVertices.size(); i++)
+			int nodeCounter = 0; // tells the messaging node list which node it is working with.
+			for(int i = 0; i < vertices.size(); i++)
 			{
-				// get distance to each vertex in the sorted list. 
-				// print this distance out for testing.
-				System.out.println("distance to vertex " + (i+1) + " is " + d.getDistanceTo(sortedVertices.get(i).getVertexPortNum())); 
+				//System.out.println("distance to vertex " + (i+1) + " is " + d.getDistanceTo(vertices.get(i).getVertexPortNum())); // just for testing. Will not need this yet.
+				
+				// its time to generate the Messaging_Node_List
+				try 
+				{
+					// generate the messaging_nodes_list for every node in the registry.
+					byte[] msgToSend = setupMsg.getNodeListBytes(vertices, nodeCounter, numOfConnections); // get the full messaging nodes list message.
+					send(nodeSockets.get(nodeCounter), msgToSend); // send this message to the MessagingNodes.
+					nodeCounter++; // keeps track of which node we are on as well which socket to use to send the Messaging_Nodes_List.
+					
+				} 
+				catch (IOException e) {
+					System.err.println("Registry caught error: " + e.getMessage()); // print the error.
+				}	
 			}
-			
-			
-			/*
-			// print the topological sort for testing to make sure it is correct.
-			for(int i = 0; i < sortVertices.size(); i++)
-			{
-				System.out.println("Messaging Node (vertex) " + (i+1) + " is: " + sortVertices.get(i).getVertexPortNum()); // print out the vertex and it's port num.
-			}
-			*/
-			
-			
-			
-			
-			try 
-			{
-				// need to modify this message here!!
-				byte[] msgToSend = setupMsg.getNodeListBytes(registeredNodes, numOfConnections); // get the full messaging nodes list message.
-				// WORKING RIGHT HERE!!!!
-			} 
-			catch (IOException e) {
-				System.err.println("Registry caught error: " + e.getMessage()); // print the error.
-			}
-			
 		}
 	}
 	// runs when the registry thread starts.

@@ -45,8 +45,9 @@ public class Dijkstra {
             // compare weights of these two vertices.
             public int compare(Vertex v1, Vertex v2)
             {
-                int weightOne = Dijkstra.this.distances.get(v1.getVertexPortNum()); // get weight of this vertex
-                int weightTwo = Dijkstra.this.distances.get(v2.getVertexPortNum()); // get weight of this vertex.
+            	// errors are here.
+                int weightOne = Dijkstra.this.distances.get(v1.convertToString(v1.getVertexPortNum())); // distances stored by portnum in string form.
+                int weightTwo = Dijkstra.this.distances.get(v2.convertToString(v2.getVertexPortNum())); // distances stored by portnum in string form.
                 return weightOne - weightTwo; // return the modified weight of the two vertices.
             }
         });
