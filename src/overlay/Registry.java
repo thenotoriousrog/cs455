@@ -14,28 +14,43 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Random;
+import java.util.StringTokenizer;
+
+import Graph.Dijkstra;
+import Graph.Edge;
+import Graph.Graph;
+import Graph.Vertex;
+import wireformat.MessagingNodesListMessage;
+import wireformat.RegistryRegistrationResponseMessage;
 
 
 
-public class Registry {
+public class Registry implements Runnable {
 	
 	private static ServerSocket registryServer; // serversocket that the registry will be using.
 	private static Socket nodeSocket; // socket that the registry will use to communicate between the nodes.
+	private static Socket sendSocket; // socket that will be used to send messages back to MessagingNodes.
+	private static Registry theRegistry; // a copy of the registry we are using.
+	private static Graph Overlay; // the Graph that holds the overlay.  
+	private static Vertex newVertex; // Vertex that we will add to the overlay.
+	private static ArrayList<Vertex> vertices = new ArrayList<Vertex>(); // holds list of vertices that are being registered.
+	private static ArrayList<Socket> nodeSockets = new ArrayList<Socket>(); // holds all nodes that are registered in the registry.
 	
 	// Pair<String, Integer> is in the form of hostname, portnum for the nodes.
 	private static ArrayList<Pair<String, Integer>> registeredNodes = new ArrayList<Pair<String, Integer>>(); // an array list of the hostname/portnum node Pairs
 	
-
 	// check if any hostnames match the current node's
-	public static boolean matchedHostnames(ArrayList<Pair<String, Integer>> registeredNodes, String hostname)
+	public static boolean matchedIPAddresses(ArrayList<Pair<String, Integer>> registeredNodes, String IPaddr)
 	{
 		boolean matched = false; // if a hostname matches, set to true.
 		
 		// loop through and check all hostnames.
 		for(int i = 0; i < registeredNodes.size(); i++)
 		{
-			if(registeredNodes.get(i).getFirst() == hostname) 
+			if(registeredNodes.get(i).getFirst() == IPaddr) 
 			{
 				matched = true;  // hostnames match.
 			}
@@ -62,7 +77,7 @@ public class Registry {
 	}
 	
 	// checks if a MessagingNode is registered or not.
-	public static boolean isRegistered(int portnum, String hostname)
+	public static boolean isRegistered(int portnum, String IPaddr)
 	{
 		if(registeredNodes.isEmpty())
 		{
@@ -70,7 +85,7 @@ public class Registry {
 		}
 		else
 		{
-			boolean hostnamesMatch = matchedHostnames(registeredNodes, hostname); // returns true if any hostnames match
+			boolean hostnamesMatch = matchedIPAddresses(registeredNodes, IPaddr); // returns true if any hostnames match
 			boolean portnumsMatch = matchedPortnums(registeredNodes, portnum); // returns true if portnums match.
 			
 			if(hostnamesMatch && portnumsMatch == true) // node is already registered.
@@ -84,112 +99,227 @@ public class Registry {
 		}
 	}
 	
-	// nodes sending a registration command are sent here.
-	public static int register(int portnum, String hostname)
+	// this method will start a connection with a MessagingNode and send appropriate messages.
+	public static void send(Socket socket, byte[] messageToSend)
 	{
-		if(isRegistered(portnum, hostname) == false) // check if node is registered.
+		try 
 		{
-			Pair<String, Integer> node = new Pair<String, Integer>(); // create a new node Pair.
-			node.setFirst(hostname); // set the hostname field of the pair.
-			node.setSecond(portnum); // set the portnum field of the pair.
+			TCPSender message = new TCPSender(socket);
+			message.sendData(messageToSend); // send message to the Messaging Node.
 			
-			registeredNodes.add(node); // add new node to Registry
-			return 1; // 1 == success code to the MessagingNode.
+		} catch (IOException e) {
+			System.err.println("Registry caught error: " + e.getMessage());
+		}
+	}
+	
+	// Messaging nodes sending a registration command are sent here.
+	public static void register(String IPaddr, int portnum)
+	{		
+		boolean nodeRegistered = isRegistered(portnum, IPaddr); // check if MessagingNode is registered or not.
+		
+		if(nodeRegistered == false) // node does not exist, add to registry.
+		{
+			Pair<String, Integer> newMessagingNode = new Pair<String, Integer>();
+			newMessagingNode.setFirst(IPaddr); // set the IP address of the first node.
+			newMessagingNode.setSecond(portnum); // set the second of the second node.
+			registeredNodes.add(newMessagingNode); // add the newMessagingNode into list of registered nodes.
+			
+			// add the new node into the vertices
+			
+			//Overlay = new Graph();
+			newVertex = new Vertex(newMessagingNode); // create a new vertex.
+			vertices.add(newVertex); // add vertex into the vertices list.
+			//Overlay = new Graph(vertices); // create the new graph with the vertices list, which automatically populates the Graph!
+			//Overlay.addVertex(newVertex); // add vertex to the overlay.
+			
+			// by having having a vertices list it will really help with creating the topological sort.
+			// test the topological sort out by doing it each time a node registers.
+			
+			
+			try 
+			{
+				sendSocket = new Socket(IPaddr, portnum); // establish connection with MessagingNode.
+				nodeSockets.add(sendSocket); // add socket to the node socket list.
+				RegistryRegistrationResponseMessage rrrm = new RegistryRegistrationResponseMessage(registeredNodes.size());
+				byte[] responseMessage = rrrm.getSuccessBytes(sendSocket); // get success message.
+				send(sendSocket, responseMessage); // send message to Messaging Node.
+				
+			} catch (UnknownHostException e) {
+				System.err.println("Registry caught error (unknown host): " + e.getMessage());
+			} catch (IOException e) {
+				System.err.println("Registry caught error (IO exception): " + e.getMessage());
+			}
+		}
+		else // the node already exists send the failure message to the MessagingNode.
+		{
+			try 
+			{
+				sendSocket = new Socket(IPaddr, portnum); // establish connection with MessagingNode.
+				RegistryRegistrationResponseMessage rrrm = new RegistryRegistrationResponseMessage(registeredNodes.size());
+				byte[] responseMessage = rrrm.getFailureBytes(sendSocket); // get failure message.
+				send(sendSocket, responseMessage); // send message to MessagingNode.
+				
+			} catch (UnknownHostException e) {
+				System.err.println("Registry caught error (unknown host): " + e.getMessage());
+			} catch (IOException e) {
+				System.err.println("Registry caught error (IO exception): " + e.getMessage());
+			}
+		}
+		
+		// **Note: I need to also check the socket input stream from the messaging node to ensure that they match, if they don't we need to send error message again.
+	}
+	
+	// Messaging nodes sending deregistration requests are sent here.
+	public static void deregister(String IPaddr, int portnum)
+	{
+		boolean nodeExists = isRegistered(portnum, IPaddr); // check if node is within registry.
+		if(nodeExists == true)
+		{
+			for(int i = 0; i < registeredNodes.size(); i++)
+			{
+				if( (registeredNodes.get(i).getFirst().equals(IPaddr)) && (registeredNodes.get(i).getSecond() == portnum))
+				{
+					String portnumber = newVertex.convertToString(registeredNodes.get(i).getSecond()); // convert portnum to string to find vertex.
+					Overlay.removeVertex(portnumber); // finds the vertex with this portnumber and remove it from the Overlay. 
+					registeredNodes.remove(i); // remove the node from the registry list.
+				}
+			}
 		}
 		else
 		{
-			return 0; // 0 == failure code to the MessagingNode, was not registered.
-		}	
+			System.out.println("NODE DOES NOT EXIST"); // remove this later.
+		}
 	}
 	
-	// nodes sending deregistration command are sent here.
-	public static int deregister(int portnum, String hostname)
+	// handles messages sent to the Registry.
+	public static void NodeRequest(String request, String IPaddr, int portnum)
 	{
-		return 0; // change this!
+		if(request.equals("REGISTER_REQUEST")) // MessagingNode sends a registration command.
+		{
+			register(IPaddr, portnum); // register the node within the registry.
+		}
+		else if(request.equals("DEREGISTER_REQUEST"))
+		{
+			deregister(IPaddr, portnum); // remove the node from the registry. Node should send final report to registry as well before full disconnection.
+		}
 	}
 	
-	// action requests by Messaging Nodes are sent here in the form of ints.
-	// a code is sent back to the node in the form of an integer detailing if its request was successful or not.
-	public static int NodeRequest(int request, int portnum, String hostname)
+	// message received from the TCPReceiver will be passed here for processing and sent to NodeRequest.
+	public void TCPmessage(String tcpMessage)
 	{
-		if(request == 1) // registration request.
+		String[] tokens = tcpMessage.split(" "); // split message by spaces.
+		String request = tokens[0]; // token[0] holds the node request.
+		String IPaddr = tokens[1]; // token[1] holds the node's IP address.
+		int portnum = Integer.parseInt(tokens[2]); // token[2] holds the node's port number.
+		NodeRequest(request, IPaddr, portnum); // send the request along with the relative information to handled.
+	}
+	
+	// This will create edges between the created vertices and will assign weights in the process of doing that.
+	public void buildEdgesandWeights(ArrayList<Vertex> vertices)
+	{
+		Random rn = new Random();
+		int weight = 0; // holds weight of an edge.
+		
+		System.out.println("there are " + vertices.size() + " vertices currently in the registry"); // for testing.
+		// for each vertex assign an edge along with a randomized weight.
+		for(int i = 0; i < vertices.size() - 1; i++)
 		{
-			return register(portnum, hostname); // 1 == success, 0 == failure
+			for(int j = i + 1; j < vertices.size(); j++)
+			{
+				System.out.println("test");
+				// assign an edge to each vertex to make it truly undirected. 
+				weight = rn.nextInt(10) + 1; // new weight
+				System.out.println("vertex 1: " + vertices.get(i).getVertexPortNum());
+				System.out.println("vertex 2: " + vertices.get(j).getVertexPortNum());
+				
+				Overlay.addEdge(vertices.get(i), vertices.get(j) , weight); // fill left side of vertex i
+				System.out.println("Vertex(portnum): " + vertices.get(i).getVertexPortNum() + " and Vertex(portnum): " 
+						+ vertices.get(j).getVertexPortNum() + " has weight " + weight); // for testing purposes
+				
+				weight = rn.nextInt(10) + 1; // new weight
+				Overlay.addEdge(vertices.get(i), vertices.get(j) , weight); // fill right side of vertex i
+				System.out.println("Vertex(portnum): " + vertices.get(i).getVertexPortNum() + " and Vertex(portnum): " 
+						+ vertices.get(j).getVertexPortNum() + " has weight " + weight); // for testing purposes
+				
+				weight = rn.nextInt(10) + 1; // new weight
+				Overlay.addEdge(vertices.get(j), vertices.get(i) , weight); // fill vertex j.
+				System.out.println("Vertex(portnum): " + vertices.get(j).getVertexPortNum() + " and Vertex(portnum): " 
+						+ vertices.get(i).getVertexPortNum() + " has weight " + weight); // for testing purposes
+			}
 		}
-		else if(request == 0) // deregistration request.
+	}
+	
+	// takes in a split string array for the command. Important to note what is going on here.
+	public void userCommand(String[] command)
+	{
+		if(command[0].equalsIgnoreCase("setup-overlay")) // this should trigger dijkstra's algorithm
+		{	
+			int numOfConnections = Integer.parseInt(command[1]); // get the number of connections user is requesting.
+			
+			MessagingNodesListMessage setupMsg = new MessagingNodesListMessage(); // this class must be edited!
+			
+			// since we received the setup-overlay command we must build the graph along with the edges.
+			Overlay = new Graph(vertices); // now that we have edges and vertices we can now build the overlay.
+			buildEdgesandWeights(vertices); // build the edges with weights to all the vertices.
+				
+			//System.out.println("There are " + sortedVertices.size() + " vertices in the overlay.");
+			Dijkstra d = new Dijkstra(Overlay, vertices.get(0).getVertexPortNum()); // takes in the overlay and the first graph in the list.
+			
+			int nodeCounter = 0; // tells the messaging node list which node it is working with.
+			for(int i = 0; i < vertices.size(); i++)
+			{
+				//System.out.println("distance to vertex " + (i+1) + " is " + d.getDistanceTo(vertices.get(i).getVertexPortNum())); // just for testing. Will not need this yet.
+				
+				// its time to generate the Messaging_Node_List
+				try 
+				{
+					// generate the messaging_nodes_list for every node in the registry.
+					byte[] msgToSend = setupMsg.getNodeListBytes(vertices, nodeCounter, numOfConnections); // get the full messaging nodes list message.
+					send(nodeSockets.get(nodeCounter), msgToSend); // send this message to the MessagingNodes.
+					nodeCounter++; // keeps track of which node we are on as well which socket to use to send the Messaging_Nodes_List.
+					
+				} 
+				catch (IOException e) {
+					System.err.println("Registry caught error: " + e.getMessage()); // print the error.
+				}	
+			}
+		}
+	}
+	// runs when the registry thread starts.
+	public void run()
+	{
+		System.out.println("Accepted connection from Messaging Node: " + nodeSocket); // alert console of successful connection.
+		Thread messagingNodeThread; // start a new Thread on TCPReceiver to receive messages through clientSocket.
+		try 
 		{
-			return deregister(portnum, hostname); // 1 == success, 0 == failure
-		}
-		else
-		{
-			return -1; // -1 specifies that a node's request was not recognized, handle the error for that case!
-		}
+			messagingNodeThread = new Thread(new TCPReceiver(nodeSocket, theRegistry), "tcpReceiverThread"); // pass a copy of the registry to TCPReceiver.
+			messagingNodeThread.start(); // start receiving messages.					
+		} 
+		catch (IOException e) {
+			System.err.println("messagingNodeThread got error: " + e.getMessage());
+		} 
 	}
 	
 	
 	public static void main(String[] args) {
-		// note: may want to add a thread within the registry to listen for commands.
-		
+				
 		try 
 		{
+			theRegistry = new Registry(); // instance of the registry.
+			
 			registryServer = new ServerSocket(9999); // create a server for the registry to communicate through.
 			System.out.println("Registry has started."); 
 			
-			int threadID = 0; // this will allow me to keep track of how many threads are being created.
-			// continue checking for new connections.
-			while(true)
+			// start a thread for listening for user input.
+			Thread userInputThread = new Thread(new RegistryUserInput(theRegistry), "Registry_User_Input_Thread"); // create thread for user input.
+			userInputThread.start(); // start the thread.
+			
+			while(true) // continue checking for new connections.
 			{
 				nodeSocket = registryServer.accept(); // accept connections from nodes. Remember code pauses here until a connection has been made.
-				//System.out.println("Accepted connection: " + nodeSocket); 
-				System.out.println("test 1"); // first test to make sure things go smoothely.
-				Thread nodeConnectionThread = new nodeConnectionThread(nodeSocket, ++threadID); // create a new Thread class to handle the node connection.
-				nodeConnectionThread.start(); // start this thread to handle incoming Messaging Nodes.
-				
+				Thread registryThread = new Thread(theRegistry, "Registry_Thread"); // create a registry thread. Should only be one however.
+				registryThread.start(); // start thread to start receiving messages.
 			}
-			
-			/*
-			// this is throwing an error.
-			// just try to get some nodes communicating. This is very important!
-			Thread messagingThread = new Thread(new TCPReceiver(nodeSocket));
-			messagingThread.start(); // start the thread.
-			System.out.println("test 3");
-			
-			TCPSender sendToNode = new TCPSender(nodeSocket); // sending a message to a node.
-			byte[] msg = "hello node".getBytes(); // create a byte array to send to node.
-			sendToNode.sendData(msg); // send message to the connected node.
-			*/
-			
-			//InputStreamReader inputstreamreader = new InputStreamReader(nodeSocket.getInputStream());
-		    //BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
-		    
-		   // String nodeMsg = ""; // message read from node.
-		   // Integer nodePortNum = 0; // holds the port number of the connected messaging node.
-		    
-		    // Using TCPReciever now!
-		    // ** Note ** I must make the registry a threaded server to handle multiple connections from different MessagingNodes
-		    
-		    /*
-		    // read from MessagingNode.
-		    while((nodeMsg = bufferedreader.readLine()) != null)
-		    {
-		    	System.out.println("Node says: " + nodeMsg);
-		    	nodePortNum = Integer.parseInt(nodeMsg);
-		    }
-		    */
-		    
-		    // will want to use TCPSender here.
-		    // send message back to MessagingNode
-		   // Socket sendSocket = new Socket("zatanna", nodePortNum); // use the portnum to establish a connection with the messaging node.
-		    
-		    // should be using TCPSender here.
-		   // PrintWriter writeOut = new PrintWriter(sendSocket.getOutputStream(), true);
-			//writeOut.println("Hello Messaging node we almost completed milestone!"); // send the registry the port number we are working with.
-			
-			
-			//writeOut.close(); // close the printWriter.
-		   // bufferedreader.close(); // close the bufferedreader.
-		   // inputstreamreader.close(); // close the inputstreamreader
-		   // nodeSocket.close(); // close the node socket.
 			
 		} catch (Exception e) {
 			System.err.println("Registry caught error: " + e.getMessage());

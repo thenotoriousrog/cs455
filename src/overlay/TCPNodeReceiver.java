@@ -7,21 +7,19 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.net.SocketException;
 
-// will receive data from connecting nodes.
-// this will be controlled via threads.
-public class TCPReceiver extends Thread {
+// this will take in messages sent to the MessagingNodes
+public class TCPNodeReceiver extends Thread {
 
 	private Socket socket; // socket sent to TCPReceiver
 	private DataInputStream dataIn;
 	private String message; // holds the message that was received.
-	private Registry registry; // provides a copy of the registry so that we may use it to take in messages.
+	private MessagingNode node; // provides a copy of the registry so that we may use it to take in messages.
 	
-	public TCPReceiver(Socket socket, Registry REGISTRY) throws IOException
+	public TCPNodeReceiver(Socket socket, MessagingNode NODE) throws IOException
 	{
 		this.socket = socket; // use the socket in which the node is sending the data.
-		System.out.println("socket port number = " + socket.getLocalPort());
 		dataIn = new DataInputStream(socket.getInputStream()); // get data being sent.
-		registry = REGISTRY; // set the instance of the registry to be used.
+		node = NODE; // set the messaging node instance.
 	}
 	
 	
@@ -34,7 +32,6 @@ public class TCPReceiver extends Thread {
 		{
 			try
 			{
-				//System.out.println("In TCPReceiver: portnumber = " + socket.getPort());
 				dataLength = dataIn.readInt();
 				
 				byte[] data = new byte[dataLength];
@@ -42,12 +39,11 @@ public class TCPReceiver extends Thread {
 				
 				String msg = new String(data);
 				String threadname = Thread.currentThread().getName();
-				System.out.println("TCPReceiver got message " + msg + " threadname: " + threadname); // print the received message
+				System.out.println("TCPNodeReceiver got message " + msg + " threadname: " + threadname); // print the received message
 				System.out.println(); // empty line for readability.
 					
-				registry.TCPmessage(msg); // send the message to the registry.
+				node.TCPmessage(msg); // send the message to the Messaging Node.
 				
-				//running = false; // stop the loop
 			} catch(SocketException se) {
 				System.out.println(se.getMessage());
 				break; // if socket fails, we must break the loop.

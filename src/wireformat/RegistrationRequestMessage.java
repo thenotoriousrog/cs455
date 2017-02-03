@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.net.Socket;
 
 // this will marshal and unmarshal the registration message being sent to the Registry.
-public class RegistrationMessage {
+public class RegistrationRequestMessage {
 
 	// marshals the registration message. Receives both portnum, and hostname from node creating the message.
 	public byte[] getRegistrationBytes(int portnum, Socket nodeSocket) throws IOException
@@ -17,7 +17,7 @@ public class RegistrationMessage {
 		DataOutputStream dataOutput = new DataOutputStream(new BufferedOutputStream(baOutStream));
 		
 		dataOutput.writeBytes("REGISTER_REQUEST "); // ask the registry to register the node.
-		dataOutput.writeBytes(nodeSocket.getInetAddress().toString() + " "); // write the ip address of the MessagingNode.
+		dataOutput.writeBytes(nodeSocket.getInetAddress().getHostAddress() + " ");
 		
 		String convertedPortnum = Integer.toString(portnum); // convert the portnum into a string to send to TCPReceiver.
 		dataOutput.writeBytes(convertedPortnum);
