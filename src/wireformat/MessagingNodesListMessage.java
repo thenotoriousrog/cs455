@@ -63,38 +63,48 @@ public class MessagingNodesListMessage {
 			node4IPAddr = vertices.get(nodeNum+2).getVertexIPaddr();
 			
 			
-			dataOutput.writeBytes("Messaging node" + convertedNodeNum + " " + node1PortNum + " " + node1IPAddr); // node 1 to connect to.
-			dataOutput.writeBytes("Messaging node" + convertedNodeNum + " " + node2PortNum + " " + node2IPAddr); // node 2 to connect to.
-			dataOutput.writeBytes("Messaging node" + convertedNodeNum + " " + node3PortNum + " " + node3IPAddr); // node 3 to connect to.
-			dataOutput.writeBytes("Messaging node" + convertedNodeNum + " " + node4PortNum + " " + node4IPAddr); // node 4 to connect to.
+			dataOutput.writeBytes("Messaging node" + convertedNodeNum + " " + node1PortNum + " " + node1IPAddr + "\n"); // node 1 to connect to.
+			dataOutput.writeBytes("Messaging node" + convertedNodeNum + " " + node2PortNum + " " + node2IPAddr + "\n"); // node 2 to connect to.
+			dataOutput.writeBytes("Messaging node" + convertedNodeNum + " " + node3PortNum + " " + node3IPAddr + "\n"); // node 3 to connect to.
+			dataOutput.writeBytes("Messaging node" + convertedNodeNum + " " + node4PortNum + " " + node4IPAddr + "\n"); // node 4 to connect to.
 		}
 		else if(nodeNum == 2) // connects to first node, and last node then node+1 and node+2
 		{
 			// string formation
 			String firstNodePortNum = Integer.toString(vertices.get(nodeNum-1).getVertexPortNum());
-			String lastNodePortNum = Integer.toString(vertices.get(vertices.size()).getVertexPortNum());
+			String lastNodePortNum = Integer.toString(vertices.get(vertices.size()-1).getVertexPortNum());
 			String firstNodeIPAddr = vertices.get(nodeNum-1).getVertexIPaddr(); 
-			String lastNodeIPAddr = vertices.get(vertices.size()).getVertexIPaddr();
+			String lastNodeIPAddr = vertices.get(vertices.size()-1).getVertexIPaddr();
+			
+			node3PortNum = Integer.toString(vertices.get(nodeNum+1).getVertexPortNum());
+			node4PortNum = Integer.toString(vertices.get(nodeNum+2).getVertexPortNum());
+			node3IPAddr = vertices.get(nodeNum+1).getVertexIPaddr();
+			node4IPAddr = vertices.get(nodeNum+2).getVertexIPaddr();
 			
 			// writing node info
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + firstNodePortNum + " " + firstNodeIPAddr); // connect to first node.
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + lastNodePortNum + " " + lastNodeIPAddr); // connect to last node.
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node3PortNum + " " + node3IPAddr); // connect to node+1
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node4PortNum + " " + node4IPAddr); // connect to node+2
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + firstNodePortNum + " " + firstNodeIPAddr + "\n"); // connect to first node.
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + lastNodePortNum + " " + lastNodeIPAddr + "\n"); // connect to last node.
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node3PortNum + " " + node3IPAddr + "\n"); // connect to node+1
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node4PortNum + " " + node4IPAddr + "\n"); // connect to node+2
 		}
 		else if(nodeNum == 1) // connects to last node, second to last node, then node+1 and node+2
 		{
 			// string formation
-			String lastNodePortNum = Integer.toString(vertices.get(vertices.size()).getVertexPortNum());
-			String secToLastNodePortNum = Integer.toString(vertices.get(vertices.size()-1).getVertexPortNum());
-			String lastNodeIPAddr = vertices.get(vertices.size()).getVertexIPaddr();
-			String secToLastNodeIPAddr = vertices.get(vertices.size()-1).getVertexIPaddr();
+			String lastNodePortNum = Integer.toString(vertices.get(vertices.size()-1).getVertexPortNum());
+			String secToLastNodePortNum = Integer.toString(vertices.get(vertices.size()-2).getVertexPortNum());
+			String lastNodeIPAddr = vertices.get(vertices.size()-1).getVertexIPaddr();
+			String secToLastNodeIPAddr = vertices.get(vertices.size()-2).getVertexIPaddr();
+			
+			node3PortNum = Integer.toString(vertices.get(nodeNum+1).getVertexPortNum());
+			node4PortNum = Integer.toString(vertices.get(nodeNum+2).getVertexPortNum());
+			node3IPAddr = vertices.get(nodeNum+1).getVertexIPaddr();
+			node4IPAddr = vertices.get(nodeNum+2).getVertexIPaddr();
 			
 			// writing node info
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + lastNodePortNum + " " + lastNodeIPAddr); // node 1 to connect to.
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + secToLastNodePortNum + " " + secToLastNodeIPAddr); // node 2 to connect to.
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node3PortNum + " " + node3IPAddr); // node 3 to connect to.
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node4PortNum + " " + node4IPAddr); // node 4 to connect to.
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + lastNodePortNum + " " + lastNodeIPAddr + "\n"); // node 1 to connect to.
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + secToLastNodePortNum + " " + secToLastNodeIPAddr + "\n"); // node 2 to connect to.
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node3PortNum + " " + node3IPAddr + "\n"); // node 3 to connect to.
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node4PortNum + " " + node4IPAddr + "\n"); // node 4 to connect to.
 		}
 		else if(nodeNum == vertices.size()) // connects to lastnode-1, lastnode-2, but connects to first node, and second node.
 		{
@@ -104,11 +114,16 @@ public class MessagingNodesListMessage {
 			String firstNodeIPAddr = vertices.get(0).getVertexIPaddr();
 			String secondNodeIPAddr = vertices.get(1).getVertexIPaddr();
 			
+			node1PortNum = Integer.toString(vertices.get(nodeNum-1).getVertexPortNum());
+			node2PortNum = Integer.toString(vertices.get(nodeNum-2).getVertexPortNum());
+			node1IPAddr = vertices.get(nodeNum-1).getVertexIPaddr();
+			node2IPAddr = vertices.get(nodeNum-2).getVertexIPaddr();
+			
 			// writing node info
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node1PortNum + " " + node1IPAddr); // connect to first node.
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node2PortNum + " " + node2IPAddr); // connect to second node.
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + firstNodePortNum + " " + firstNodeIPAddr); // connect to node+1
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + secondNodePortNum + " " + secondNodeIPAddr); // connect to node+2
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node1PortNum + " " + node1IPAddr + "\n"); // connect to first node.
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node2PortNum + " " + node2IPAddr + "\n"); // connect to second node.
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + firstNodePortNum + " " + firstNodeIPAddr + "\n"); // connect to node+1
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + secondNodePortNum + " " + secondNodeIPAddr + "\n"); // connect to node+2
 		}
 		else // nodeNum == vertices.size()-1, connects to lastnode, connects to node1, connects to node-1, connects to node-2
 		{
@@ -116,11 +131,20 @@ public class MessagingNodesListMessage {
 			String firstNodePortNum = Integer.toString(vertices.get(0).getVertexPortNum());
 			String firstNodeIPAddr = vertices.get(0).getVertexIPaddr();
 			
+			
+			String lastNodePortNum = Integer.toString(vertices.get(vertices.size()-1).getVertexPortNum());
+			node3PortNum = Integer.toString(vertices.get(nodeNum-1).getVertexPortNum());
+			node4PortNum = Integer.toString(vertices.get(nodeNum-2).getVertexPortNum());
+			
+			String lastNodeIPAddr = vertices.get(vertices.size()-1).getVertexIPaddr();
+			node3IPAddr = vertices.get(nodeNum-1).getVertexIPaddr();
+			node4IPAddr = vertices.get(nodeNum-2).getVertexIPaddr();
+			
 			// writing node info
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + firstNodePortNum + " " + firstNodeIPAddr); // connect to first node.
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node1PortNum + " " + node1IPAddr); // connect to last node.
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node3PortNum + " " + node3IPAddr); // connect to node+1
-			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node4PortNum + " " + node4IPAddr); // connect to node+2
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + firstNodePortNum + " " + firstNodeIPAddr + "\n"); // connect to first node.
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + lastNodePortNum + " " + lastNodeIPAddr + "\n"); // connect to last node.
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node3PortNum + " " + node3IPAddr + "\n"); // connect to node-1
+			dataOutput.writeBytes("Messaging Node" + convertedNodeNum + " " + node4PortNum + " " + node4IPAddr + "\n"); // connect to node-2
 		}
 		
 		// clean up
