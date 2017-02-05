@@ -1,19 +1,12 @@
 package overlay;
 
-import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 import wireformat.RegistrationRequestMessage;
-import wireformat.WireFormat;
 
 // creates the structure of the messaging nodes.
 public class MessagingNode implements Node, Runnable {
@@ -55,7 +48,7 @@ public class MessagingNode implements Node, Runnable {
 	// this method is in charge of making connections with the other Messaging Nodes.
 	public ArrayList<Pair<String, Integer>> parseNodeInfo(String[] splitMessage)
 	{
-		int numConnections = Integer.parseInt(splitMessage[1]); // holds the number of connections the messaging node should make.
+		//int numConnections = Integer.parseInt(splitMessage[1]); // holds the number of connections the messaging node should make.
 		ArrayList<Pair<String, Integer>> otherNodes = new ArrayList<Pair<String, Integer>>(); // this will hold all of the messaging nodes that we must connect to.
 		int portNum = 0; // port number that we will have for the node.
 		String IPAddr = ""; // holds the IP address to use other nodes with.
@@ -78,22 +71,38 @@ public class MessagingNode implements Node, Runnable {
 		return otherNodes; // return the parsed list of other nodes.
 	}
 	
-	// this will take in the messages that TCPNodeReceiver receives.
-	public void TCPmessage(String message)
+	// start making connections with the other nodes.
+	public void makeConnections(ArrayList<Pair<String, Integer>> nodesToConnectTo)
 	{
-		System.out.println("MessagingNode got message: " + message + " ~from Registry.");
+		ArrayList<Socket> nodeSockets = new ArrayList<Socket>(); // holds lists of Sockets to make connections to.
+				
+		// loop through list of nodes.
+		for(int i = 0; i < nodesToConnectTo.size(); i++)
+		{
+			try 
+			{
+				Socket socket = new Socket(nodesToConnectTo.get(i).getFirst(), nodesToConnectTo.get(i).getSecond());
+				nodeSockets.add(socket); // add the new socket into the list of sockets.
+							
+			} catch (IOException e) {
+				
+				System.out.println(e.getMessage()); // print the message.
+			}
+		}
+	}
+	
+	// this will take in the messages that TCPNodeReceiver receives.
+	public void TCPNodeMessage(String message)
+	{
+		//System.out.println("MessagingNode got message: " + message + " ~from Registry.");
 		
 		String[] splitMessage = message.split("\n"); // split each line up.
-
-		
-		// note: line1 = message type, line2 = number of connections if it is the messaging node list.
-		if(splitMessage[0].equals("MESSAGING_NODES_LIST")); // this will tell the messaging node where to connect thanks to the registry.
+		if(splitMessage[0].equals("MESSAGING_NODES_LIST"))
 		{
-			otherNodes = parseNodeInfo(splitMessage); // parse node info and acquire list of other messaging nodes.
-			
-			// now it is time to begin making connections with these other nodes.
+			otherNodes = parseNodeInfo(splitMessage); // get that info.
+			// System.out.println("first node has IP address: " + otherNodes.get(0).getFirst() + " and has portnum: " + otherNodes.get(0).getSecond()); // for testing.
+			makeConnections(otherNodes); // start making connections with the other nodes.
 		}
-		
 	}
 	
 	// this will run when we start threading the MessagingNode.
@@ -123,7 +132,6 @@ public class MessagingNode implements Node, Runnable {
 			ip = InetAddress.getLocalHost(); // get hostname
 			hostname = ip.getHostName();
 			portNum = serverSocket.getLocalPort(); // assign the port number that was assigned to serverSocket.
-			
 			registerNode(registrySocket, portNum, hostname); // have messaging node get registered with the Registry.
 			
 			System.out.println("Messaging node started on port " + portNum + " with hostname " + hostname); // alert that a node was started to the console.

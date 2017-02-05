@@ -3,24 +3,14 @@ package overlay;
  * This is the registry class. Here the registry will be created which keeps track of all messaging transmissions.
  */
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Random;
-import java.util.StringTokenizer;
 
 import Graph.Dijkstra;
-import Graph.Edge;
 import Graph.Graph;
 import Graph.Vertex;
 import wireformat.MessagingNodesListMessage;
@@ -125,16 +115,8 @@ public class Registry implements Runnable {
 			registeredNodes.add(newMessagingNode); // add the newMessagingNode into list of registered nodes.
 			
 			// add the new node into the vertices
-			
-			//Overlay = new Graph();
 			newVertex = new Vertex(newMessagingNode); // create a new vertex.
 			vertices.add(newVertex); // add vertex into the vertices list.
-			//Overlay = new Graph(vertices); // create the new graph with the vertices list, which automatically populates the Graph!
-			//Overlay.addVertex(newVertex); // add vertex to the overlay.
-			
-			// by having having a vertices list it will really help with creating the topological sort.
-			// test the topological sort out by doing it each time a node registers.
-			
 			
 			try 
 			{
@@ -220,31 +202,26 @@ public class Registry implements Runnable {
 		Random rn = new Random();
 		int weight = 0; // holds weight of an edge.
 		
-		System.out.println("there are " + vertices.size() + " vertices currently in the registry"); // for testing.
 		// for each vertex assign an edge along with a randomized weight.
 		for(int i = 0; i < vertices.size() - 1; i++)
 		{
 			for(int j = i + 1; j < vertices.size(); j++)
 			{
-				System.out.println("test");
 				// assign an edge to each vertex to make it truly undirected. 
 				weight = rn.nextInt(10) + 1; // new weight
-				System.out.println("vertex 1: " + vertices.get(i).getVertexPortNum());
-				System.out.println("vertex 2: " + vertices.get(j).getVertexPortNum());
-				
 				Overlay.addEdge(vertices.get(i), vertices.get(j) , weight); // fill left side of vertex i
-				System.out.println("Vertex(portnum): " + vertices.get(i).getVertexPortNum() + " and Vertex(portnum): " 
-						+ vertices.get(j).getVertexPortNum() + " has weight " + weight); // for testing purposes
+				//System.out.println("Vertex(portnum): " + vertices.get(i).getVertexPortNum() + " and Vertex(portnum): " 
+				//		+ vertices.get(j).getVertexPortNum() + " has weight " + weight); // for testing purposes
 				
 				weight = rn.nextInt(10) + 1; // new weight
 				Overlay.addEdge(vertices.get(i), vertices.get(j) , weight); // fill right side of vertex i
-				System.out.println("Vertex(portnum): " + vertices.get(i).getVertexPortNum() + " and Vertex(portnum): " 
-						+ vertices.get(j).getVertexPortNum() + " has weight " + weight); // for testing purposes
+				//System.out.println("Vertex(portnum): " + vertices.get(i).getVertexPortNum() + " and Vertex(portnum): " 
+				//		+ vertices.get(j).getVertexPortNum() + " has weight " + weight); // for testing purposes
 				
 				weight = rn.nextInt(10) + 1; // new weight
 				Overlay.addEdge(vertices.get(j), vertices.get(i) , weight); // fill vertex j.
-				System.out.println("Vertex(portnum): " + vertices.get(j).getVertexPortNum() + " and Vertex(portnum): " 
-						+ vertices.get(i).getVertexPortNum() + " has weight " + weight); // for testing purposes
+				//System.out.println("Vertex(portnum): " + vertices.get(j).getVertexPortNum() + " and Vertex(portnum): " 
+				//		+ vertices.get(i).getVertexPortNum() + " has weight " + weight); // for testing purposes
 			}
 		}
 	}
@@ -285,6 +262,7 @@ public class Registry implements Runnable {
 			}
 		}
 	}
+	
 	// runs when the registry thread starts.
 	public void run()
 	{
@@ -299,7 +277,6 @@ public class Registry implements Runnable {
 			System.err.println("messagingNodeThread got error: " + e.getMessage());
 		} 
 	}
-	
 	
 	public static void main(String[] args) {
 				

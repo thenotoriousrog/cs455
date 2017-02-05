@@ -1,9 +1,7 @@
 package overlay;
 
-import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.Socket;
 import java.net.SocketException;
 
@@ -13,7 +11,6 @@ public class TCPReceiver extends Thread {
 
 	private Socket socket; // socket sent to TCPReceiver
 	private DataInputStream dataIn;
-	private String message; // holds the message that was received.
 	private Registry registry; // provides a copy of the registry so that we may use it to take in messages.
 	
 	public TCPReceiver(Socket socket, Registry REGISTRY) throws IOException

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import Graph.Vertex;
-import overlay.Pair;
 
 public class MessagingNodesListMessage {
 
