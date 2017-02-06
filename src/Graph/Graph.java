@@ -5,10 +5,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+import overlay.Trio;
+
 public class Graph {
     
     private HashMap<String, Vertex> vertices;
     private HashMap<Integer, Edge> edges;
+    private ArrayList<Trio<Vertex, Vertex, Integer>> edgeList = new ArrayList<Trio<Vertex, Vertex, Integer>>(); // simple list to be used to generate link weights.
     
     public Graph()
     {
@@ -22,6 +25,11 @@ public class Graph {
  		return Integer.toString(anInt); // return String version of the portnumber.
  	}
     
+ 	public ArrayList<Trio<Vertex, Vertex, Integer>> getEdgeList()
+ 	{
+ 		return edgeList; // return the list of edges.
+ 	}
+ 	
     // populates arraylist with vertices.
     public Graph(ArrayList<Vertex> vertices){
         
@@ -63,6 +71,8 @@ public class Graph {
         }
             
         edges.put(e.hashCode(), e); // put the edge in.
+        Trio<Vertex, Vertex, Integer> newEdge = new Trio<Vertex, Vertex, Integer>(one, two, weight); // create a new Trio.
+        edgeList.add(newEdge); // add the newly created edge into the trio.
         one.addSquadMember(e);
         two.addSquadMember(e);
         

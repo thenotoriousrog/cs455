@@ -30,6 +30,17 @@ public class MessagingNode implements Node, Runnable {
 		return hostname; // send the hostname
 	}
 	
+	// this method will get the current list of node connections so that the registry can generate the link weights to each node for this messaging node.
+	private void setNodeConnectionList(ArrayList<Pair<String, Integer>> nodeConnectionList)
+	{
+		otherNodes = nodeConnectionList; // set this field.
+	}
+	
+	private ArrayList<Pair<String, Integer>> getNodeConnectionList()
+	{
+		return otherNodes; // return the list of other nodes that this messaging node is connected to.
+	}
+	
 	// this method will be in control of generating the registration message and telling the registry to register the MessagingNode.
 	public static void registerNode(Socket registrySocket, int portNum, String hostname)
 	{
@@ -48,7 +59,6 @@ public class MessagingNode implements Node, Runnable {
 	// this method is in charge of making connections with the other Messaging Nodes.
 	public ArrayList<Pair<String, Integer>> parseNodeInfo(String[] splitMessage)
 	{
-		//int numConnections = Integer.parseInt(splitMessage[1]); // holds the number of connections the messaging node should make.
 		ArrayList<Pair<String, Integer>> otherNodes = new ArrayList<Pair<String, Integer>>(); // this will hold all of the messaging nodes that we must connect to.
 		int portNum = 0; // port number that we will have for the node.
 		String IPAddr = ""; // holds the IP address to use other nodes with.
@@ -71,8 +81,8 @@ public class MessagingNode implements Node, Runnable {
 		return otherNodes; // return the parsed list of other nodes.
 	}
 	
-	// start making connections with the other nodes.
-	public void makeConnections(ArrayList<Pair<String, Integer>> nodesToConnectTo)
+	// start making connections with the other nodes and displays message to console upon success.
+	public void makeConnections(ArrayList<Pair<String, Integer>> nodesToConnectTo, int numOfConnections)
 	{
 		ArrayList<Socket> nodeSockets = new ArrayList<Socket>(); // holds lists of Sockets to make connections to.
 				
@@ -82,13 +92,15 @@ public class MessagingNode implements Node, Runnable {
 			try 
 			{
 				Socket socket = new Socket(nodesToConnectTo.get(i).getFirst(), nodesToConnectTo.get(i).getSecond());
-				nodeSockets.add(socket); // add the new socket into the list of sockets.
+				nodeSockets.add(socket); // add the new socket into the list of sockets (nodes connected to)
 							
 			} catch (IOException e) {
 				
 				System.out.println(e.getMessage()); // print the message.
 			}
 		}
+		
+		System.out.println("All connections are established. Number of connections: " + numOfConnections); // message to console for testing purposes.
 	}
 	
 	// this will take in the messages that TCPNodeReceiver receives.
@@ -97,11 +109,15 @@ public class MessagingNode implements Node, Runnable {
 		//System.out.println("MessagingNode got message: " + message + " ~from Registry.");
 		
 		String[] splitMessage = message.split("\n"); // split each line up.
+		
 		if(splitMessage[0].equals("MESSAGING_NODES_LIST"))
 		{
+			String[] splitLine = splitMessage[1].split(" "); // split the line containing the number of messaging nodes.
+			int numConnections = Integer.parseInt(splitLine[splitLine.length-1]); // holds the number of connections the messaging node should make.
 			otherNodes = parseNodeInfo(splitMessage); // get that info.
+			setNodeConnectionList(otherNodes); // set this list of node connections to be used by the registry.
 			// System.out.println("first node has IP address: " + otherNodes.get(0).getFirst() + " and has portnum: " + otherNodes.get(0).getSecond()); // for testing.
-			makeConnections(otherNodes); // start making connections with the other nodes.
+			makeConnections(otherNodes, numConnections); // start making connections with the other nodes.
 		}
 	}
 	

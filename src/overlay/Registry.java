@@ -13,6 +13,7 @@ import java.util.Random;
 import Graph.Dijkstra;
 import Graph.Graph;
 import Graph.Vertex;
+import wireformat.LinkWeightsMessage;
 import wireformat.MessagingNodesListMessage;
 import wireformat.RegistryRegistrationResponseMessage;
 
@@ -254,12 +255,28 @@ public class Registry implements Runnable {
 					byte[] msgToSend = setupMsg.getNodeListBytes(vertices, nodeCounter, numOfConnections); // get the full messaging nodes list message.
 					send(nodeSockets.get(nodeCounter), msgToSend); // send this message to the MessagingNodes.
 					nodeCounter++; // keeps track of which node we are on as well which socket to use to send the Messaging_Nodes_List.
-					
 				} 
 				catch (IOException e) {
 					System.err.println("Registry caught error: " + e.getMessage()); // print the error.
 				}	
 			}
+		} 
+		else if(command[0].equalsIgnoreCase("send-overlay-link-weights")) // this command will initiate the "Link_Weight" message to be sent to all other messaging nodes.
+		{
+			LinkWeightsMessage lwm = new LinkWeightsMessage();
+			try 
+			{
+				byte[] msgToSend = lwm.getLinkWeightBytes(vertices, Overlay); // generates Link_Weight message 
+				
+				// send message to each Messaging Node.
+				for(int i = 0; i < nodeSockets.size(); i++)
+				{
+					send(nodeSockets.get(i), msgToSend); // send the message to each messaging node, each node will process the message for themselves.
+				}
+			} 
+			catch (IOException e){
+				System.err.println(e.getMessage());
+			} 
 		}
 	}
 	

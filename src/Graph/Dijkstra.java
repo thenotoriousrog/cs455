@@ -31,12 +31,6 @@ public class Dijkstra {
         this.graph = graph;
         Set<String> vertexKeys = this.graph.vertexKeys();
         
-        /* remove this later.
-        if(!vertexKeys.contains(initialVertexPortNum)){
-            throw new IllegalArgumentException("The graph must contain the initial vertex.");
-        }
-        */
-        
         this.initialVertexPortNum = firstVertexPortNum;
         this.predecessors = new HashMap<String, String>();
         this.distances = new HashMap<String, Integer>();
@@ -136,7 +130,6 @@ public class Dijkstra {
         
         return path; // return the shortest path to the target vertex.
     }
-    
     
     // get distance from initial vertex. is this the weight?
     public int getDistanceTo(int targetVertexPortNum)
