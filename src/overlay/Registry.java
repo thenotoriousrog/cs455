@@ -16,6 +16,7 @@ import Graph.Vertex;
 import wireformat.LinkWeightsMessage;
 import wireformat.MessagingNodesListMessage;
 import wireformat.RegistryRegistrationResponseMessage;
+import wireformat.TaskInitiateMessage;
 
 
 
@@ -29,6 +30,8 @@ public class Registry implements Runnable {
 	private static Vertex newVertex; // Vertex that we will add to the overlay.
 	private static ArrayList<Vertex> vertices = new ArrayList<Vertex>(); // holds list of vertices that are being registered.
 	private static ArrayList<Socket> nodeSockets = new ArrayList<Socket>(); // holds all nodes that are registered in the registry.
+	
+
 	
 	// Pair<String, Integer> is in the form of hostname, portnum for the nodes.
 	private static ArrayList<Pair<String, Integer>> registeredNodes = new ArrayList<Pair<String, Integer>>(); // an array list of the hostname/portnum node Pairs
@@ -202,7 +205,6 @@ public class Registry implements Runnable {
 	{
 		Random rn = new Random();
 		int weight = 0; // holds weight of an edge.
-		
 		// for each vertex assign an edge along with a randomized weight.
 		for(int i = 0; i < vertices.size() - 1; i++)
 		{
@@ -227,10 +229,12 @@ public class Registry implements Runnable {
 		}
 	}
 	
+	
+	
 	// takes in a split string array for the command. Important to note what is going on here.
 	public void userCommand(String[] command)
 	{
-		if(command[0].equalsIgnoreCase("setup-overlay")) // this should trigger dijkstra's algorithm
+		if(command[0].equals("setup-overlay")) // this should trigger dijkstra's algorithm
 		{	
 			int numOfConnections = Integer.parseInt(command[1]); // get the number of connections user is requesting.
 			
@@ -261,7 +265,7 @@ public class Registry implements Runnable {
 				}	
 			}
 		} 
-		else if(command[0].equalsIgnoreCase("send-overlay-link-weights")) // this command will initiate the "Link_Weight" message to be sent to all other messaging nodes.
+		else if(command[0].equals("send-overlay-link-weights")) // this command will initiate the "Link_Weight" message to be sent to all other messaging nodes.
 		{
 			LinkWeightsMessage lwm = new LinkWeightsMessage();
 			try 
@@ -276,6 +280,24 @@ public class Registry implements Runnable {
 			} 
 			catch (IOException e){
 				System.err.println(e.getMessage());
+			} 
+		}
+		else if(command[0].equals("start")) // tells all messaging nodes to begin sending messages to each other.
+		{
+			int numberOfRounds = Integer.parseInt(command[1]); // get the number of rounds that the nodes should be going for.
+			TaskInitiateMessage tim = new TaskInitiateMessage();
+			try 
+			{
+				byte[] msgToSend = tim.getTaskInitiateMessage(numberOfRounds);
+				
+				// send message to each Messaging Node.
+				for(int i = 0; i < nodeSockets.size(); i++)
+				{
+					send(nodeSockets.get(i), msgToSend); // send the message to this node.
+				}
+			} 
+			catch (IOException e) {
+				System.err.println("Registry got error while doing start command: " + e.getMessage());
 			} 
 		}
 	}
