@@ -3,16 +3,15 @@ package Graph;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Set;
 
-import overlay.Pair;
+import overlay.Trio;
 
 public class Graph {
     
     private HashMap<String, Vertex> vertices;
     private HashMap<Integer, Edge> edges;
+    private ArrayList<Trio<Vertex, Vertex, Integer>> edgeList = new ArrayList<Trio<Vertex, Vertex, Integer>>(); // simple list to be used to generate link weights.
     
     public Graph()
     {
@@ -26,6 +25,11 @@ public class Graph {
  		return Integer.toString(anInt); // return String version of the portnumber.
  	}
     
+ 	public ArrayList<Trio<Vertex, Vertex, Integer>> getEdgeList()
+ 	{
+ 		return edgeList; // return the list of edges.
+ 	}
+ 	
     // populates arraylist with vertices.
     public Graph(ArrayList<Vertex> vertices){
         
@@ -67,6 +71,8 @@ public class Graph {
         }
             
         edges.put(e.hashCode(), e); // put the edge in.
+        Trio<Vertex, Vertex, Integer> newEdge = new Trio<Vertex, Vertex, Integer>(one, two, weight); // create a new Trio.
+        edgeList.add(newEdge); // add the newly created edge into the trio.
         one.addSquadMember(e);
         two.addSquadMember(e);
         
@@ -133,105 +139,4 @@ public class Graph {
     {
         return new HashSet<Edge>(this.edges.values());
     }
-    
-    /*
-     * This whole block of code can go away right here. It is no longer needed.
-    
-    // creates a topological sort and sends back the sorted ArrayList to the caller of this method.
-    public ArrayList<Vertex> topologicalSort(ArrayList<Vertex> vertices, Graph graph)
-    {
-    	ArrayList<Vertex> result = new ArrayList<Vertex>(); // result of our topological sort
-    	HashMap<Vertex, Integer> map = new HashMap<Vertex, Integer>();
-    	
-    	// calculate in degree of all vertices.
-    	
-    	ArrayList<Edge> squad = new ArrayList<Edge>();
-    	squad = vertices.get(0).getSquad(); // gets neighbors // getsquadmember() gets a vertex.
-    	
-    	Vertex neighbor = null; // will be changed later in code.
-    	
-    	// sort through all vertices and check indegree of each.
-    	for(int i = 0; i < vertices.size(); i++)
-    	//for(int i = 0; i < vertices.size() - 1; i++)
-    	{
-    		// It is important to sort through each vertex and find neighbors. 
-    		// that is what we are trying to do below is grab each vertex and find it's corresponding neighbors.
-    		
-    		// sort through each edge looking for neighbors of the current vertex.
-    		for(int j = 0; j < squad.size(); j++)
-    		//for(int j = i+1; j < vertices.size(); j++)
-    		{
-    			// getting j edges that exist on vertex i, then finding neighbor vertices on vertex i.
-    			
-    			// problem lies right here. Need to figure out how to get the neighboring vertices.
-    			//System.out.println("edges in graph: " + graph.edges.size()); 
-    			// graph.edges.get() requires that we get a hashcode between two vertices! That way we can check if an edge exists!
-    			// I should try to redo this loop so that I can be sure to get all vertices within the graph.
-    			//Vertex a = vertices.get(i);
-    			//Vertex b = vertices.get(j);
-    			//edgeHashcode = a.getVertexPortNum() + b.getVertexPortNum(); // hashcode of current edge we are looking at.
-    			//System.out.println("edgehashcode " + edgeHashcode); // print the hashcode.
-    			//System.out.println("another way to get an edge: " + graph.edges.get(edges.get(j).hashCode())); // get the current edges hashcode.
-    			//System.out.println("another way to get an edge 2: " + graph.edges.get(edgeHashcode.hashCode())); // another way to get an edge.
-    			//System.out.println("testing usage of squad variable: " + graph.edges.get(squad.get(0).hashCode()).getNeighbor(vertices.get(i)).getVertexPortNum());
-    			//System.out.println("Printing neighbor that we are getting: " + graph.edges.get(edgeHashcode.hashCode()).getNeighbor(vertices.get(i)).getVertexPortNum());
-    			if(graph.edges.get(squad.get(0).hashCode()).getNeighbor(vertices.get(i)) != null)
-    			{
-    				System.out.println("topological sort test 1");
-    				//System.out.println("we got vertex with portnum: " + graph.edges.get(squad.get(j).hashCode()).getNeighbor(vertices.get(i)).getVertexPortNum());
-    				neighbor = graph.edges.get(squad.get(j).hashCode()).getNeighbor(vertices.get(i)); // neighbor vertex.
-    				//System.out.println("neighbor vertex has portnum: " + neighbor.getVertexPortNum());
-    				if(map.containsKey(neighbor))
-        			{
-    					System.out.println("topological sort test 2");
-        				map.put(neighbor, map.get(neighbor) + 1); // assign into the map.
-        			}
-        			else
-        			{
-        				System.out.println("topological sort test 3");
-        				map.put(neighbor, 1);
-        			}
-    			}
-    			else
-    			{
-    				continue; // continue the loop
-    			}
-    		}// end loop 2
-    	}// end loop 1
-    	
-    	Queue<Vertex> queue = new LinkedList<Vertex>(); // queue to hold our vertices in topological order.
-		
-		// now need to find nodes with indegree 0 i.e. meaning vertices with no incoming edges.
-		for(int i = 0; i < vertices.size(); i++)
-		{
-			if(!map.containsKey(vertices.get(i))) // check each vertex in the map and see if it has any edges.
-			{
-				System.out.println("topological sort  4");
-				queue.offer(vertices.get(i)); // add vertex into the queue.
-				result.add(vertices.get(i)); // add vertex into our result first as these do not have any incoming edges.
-			}
-		}
-		
-		System.out.println("topological sort test 5");
-		// now we search through the other nodes using BFS.
-		while(!queue.isEmpty())
-		{
-			System.out.println("topological sort test 6");
-			Vertex v = queue.poll(); // gets the next vertex from head of the queue.
-			for(int i = 0; i < squad.size(); i++) // squad has list of all neighbors and can easily get the neighbor vertex, see loops above.
-			{
-				Vertex n = graph.edges.get(squad.get(i).hashCode()).getNeighbor(v); // gotta generate the hashcode of the edges in order to find them.
-				map.put(n, map.get(n) - 1);
-				if(map.get(n) == 0)
-				{
-					System.out.println("Topological sort test 7");
-					queue.offer(n);
-					result.add(n); // add result into our topological sort.
-				}
-			}
-		}
-    	
-		return result; // send the result back to the caller.
-    }  
-    */
 }

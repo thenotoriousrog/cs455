@@ -19,8 +19,9 @@ public class NodeUserInput extends Thread {
 		String command = ""; // holds command from user.
 		while(true) // continue while MessagingNode is connected.
 		{
-			command = input.next(); // get a command from user.
-			System.out.println("user wrote: " + command); // display the command for now, this will eventually go back to the MessagingNode
+			command = input.nextLine(); // get a command from user.
+			String[] splitMessage = command.split(" "); // split this by spaces.
+			node.userNodeCommand(splitMessage); // send the command off to be handled by the Messaging Node.	
 		}
 	}
 	

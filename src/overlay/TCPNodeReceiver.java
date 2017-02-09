@@ -1,9 +1,7 @@
 package overlay;
 
-import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.Socket;
 import java.net.SocketException;
 
@@ -12,7 +10,6 @@ public class TCPNodeReceiver extends Thread {
 
 	private Socket socket; // socket sent to TCPReceiver
 	private DataInputStream dataIn;
-	private String message; // holds the message that was received.
 	private MessagingNode node; // provides a copy of the registry so that we may use it to take in messages.
 	
 	public TCPNodeReceiver(Socket socket, MessagingNode NODE) throws IOException
@@ -41,8 +38,8 @@ public class TCPNodeReceiver extends Thread {
 				String threadname = Thread.currentThread().getName();
 				System.out.println("TCPNodeReceiver got message " + msg + " threadname: " + threadname); // print the received message
 				System.out.println(); // empty line for readability.
-					
-				node.TCPmessage(msg); // send the message to the Messaging Node.
+				
+				node.TCPNodeMessage(msg);
 				
 			} catch(SocketException se) {
 				System.out.println(se.getMessage());
