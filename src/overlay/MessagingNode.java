@@ -1,6 +1,9 @@
 package overlay;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -25,14 +28,13 @@ public class MessagingNode implements Node, Runnable {
 	ArrayList<Trio<Pair<String, Integer>, Pair<String, Integer>, Integer>> linkWeights = 
 			new ArrayList<Trio<Pair<String, Integer>, Pair<String, Integer>, Integer>>(); // this will hold the link weights between this node and it's connected node.
 	private static Socket registrySocket = null; // socket that we will use to communicate with the registry.
+	ArrayList<Pair<String, Integer>> shortestPathList = null; // holds the shortest path list sent from the registry.
 	
-	private volatile int sendTracker = 0; // keeps track of all the messages that this node sends. This is held in main memory, not cached.
-	private volatile int receiveTracker = 0; // keeps track of all the messages that this node receives. This is held in main memory, not cached.
-	private volatile int relayTracker = 0; // keeps track of all the messages that this node relays to another node
-	
-	private volatile long sendSummation = 0; // sums all the payloads that this message sends.
-	private volatile long receiveSummation = 0; // sums all the payloads that this message receives.
-	
+	private static int sendTracker = 0; // keeps track of all the messages that this node sends. This is held in main memory, not cached.
+	private static int receiveTracker = 0; // keeps track of all the messages that this node receives. This is held in main memory, not cached.
+	private static int relayTracker = 0; // keeps track of all the messages that this node relays to another node
+	private static long sendSummation = 0; // sums all the payloads that this message sends.
+	private static long receiveSummation = 0; // sums all the payloads that this message receives.
 	private volatile int Payload = 0; // Payload to send to the other nodes.
 	
 	
@@ -53,8 +55,6 @@ public class MessagingNode implements Node, Runnable {
 	{
 		otherNodes = nodeConnectionList; // set this field.
 	}
-	
-
 	
 	// this method will be in control of generating the registration message and telling the registry to register the MessagingNode.
 	public static void registerNode(Socket registrySocket, int portNum, String hostname)
@@ -212,7 +212,7 @@ public class MessagingNode implements Node, Runnable {
 	}
 	
 	// starts sending messages to random nodes based on the number of rounds (one node selected per round)
-	private void startSendingMessages(int numOfRounds)
+	private void startSendingMessages(int numOfRounds) throws IOException
 	{
 		
 		Random rn = new Random();
@@ -221,27 +221,40 @@ public class MessagingNode implements Node, Runnable {
 		// continue selecting random nodes and sending a randomized payload until we finish our rounds.
 		while(numOfRounds != 0) 
 		{
-			rn.nextInt(otherNodes.size()); // picks a random node to select in otherNodes.
+			randomNode = rn.nextInt(otherNodes.size()); // picks a random node to select in otherNodes.
 			Payload = getPayload(); // get the payload to send to another node. This is stored into main memory.
-			// generate a message to the registry requesting path to the specific node that we wish to send data to.
-			// each node will do this for every round of it's completion. 
-			// The registry will then calculate the shortest path and send it back to that node along with all the other nodes that it must send it to.
 			
-			// This should work as the algorithm by dijkstra is sending the path that will start at the node we send all the way to the origin node. Which is fine.
-			// we only need the shortest path to the node we are trying to connect to.
-			// read notes that were taken. This is crucial for the assignment.
+			// request the registry to generate the shortest path to this node
 			
-			// Once we get this, we can begin to send data, just need to make sure to read the data correctly from the nodes and make sure to update the data appropriately
+			
+			numOfRounds--; // decrement 1 from number of rounds.
+			
+			// after I am confident that the shortest path works correctly, I must start sending the data correctly to the other nodes.
 		}
 				
-		// once numOfRounds == 0 we must send the TASK_COMPLETE message to the registry.
+		// once numOfRounds == 0 we must send the TASK_COMPLETE message to the registry.	
+	}
+	
+	// nodes start at nodes[1] and remember that it is IPaddr:portnum.
+	// may need to make this method synchronized.
+	public void processShortestPath(String[] nodes)
+	{
+		shortestPathList = new ArrayList<Pair<String, Integer>>();
 		
-		
-		
+		for(int i = 1; i < nodes.length; i++)
+		{
+			String[] splitLine = nodes[i].split(":"); // splitLine[0] == IPaddr, splitLine[1] == portnum
+			String IPaddr = splitLine[0];
+			int portnum = Integer.parseInt(splitLine[1]);
+			Pair<String, Integer> newNode = new Pair<String, Integer>(IPaddr, portnum); // create a new pair.
+			
+			shortestPathList.add(newNode); // add the node into the shortest path list. 
+			// NOTE: I may want to also make this synchronized.
+		}
 	}
 	
 	// this will take in the messages that TCPNodeReceiver receives.
-	public void TCPNodeMessage(String message)
+	public void TCPNodeMessage(String message) throws IOException
 	{
 		//System.out.println("MessagingNode got message: " + message + " ~from Registry.");
 		
@@ -265,8 +278,14 @@ public class MessagingNode implements Node, Runnable {
 		}
 		else if(splitMessage[0].equals("TASK_INITIATE")) // registry is telling the nodes to begin sending data and payload.
 		{
-			int numOfRounds = Integer.parseInt(splitMessage[1]); // get the number of rounds that the messaging nodes must go for.
+			String[] splitLine = splitMessage[1].split(" ");
+			int numOfRounds = Integer.parseInt(splitLine[1]); // get the number of rounds that the messaging nodes must go for.
 			startSendingMessages(numOfRounds); // start sending messages for the number of rounds.
+		}
+		else if(splitMessage[0].equals("SHORTEST_PATH_LIST"))
+		{
+			// make a method that may or may not need to be synchronized, then go through it storing all the portnumbers.
+			processShortestPath(splitMessage); // takes in the string[] and constructs the shortest path that will be sent to the other nodes.
 		}
 	}
 	
@@ -309,6 +328,7 @@ public class MessagingNode implements Node, Runnable {
 		{
 			linkWeights.sort(sortByWeight()); // have the linkWeights get sorted by their weights.
 			Collections.reverse(linkWeights); // simply reverse this list since the list was being sorted in terms of smallest to highest.
+			
 			// loop through the link weights and print them according to size.
 			for(int i = 0; i < linkWeights.size(); i++)
 			{

@@ -16,7 +16,7 @@ public class TCPReceiver extends Thread {
 	public TCPReceiver(Socket socket, Registry REGISTRY) throws IOException
 	{
 		this.socket = socket; // use the socket in which the node is sending the data.
-		System.out.println("socket port number = " + socket.getLocalPort());
+		//System.out.println("socket port number = " + socket.getLocalPort());
 		dataIn = new DataInputStream(socket.getInputStream()); // get data being sent.
 		registry = REGISTRY; // set the instance of the registry to be used.
 	}
@@ -39,7 +39,7 @@ public class TCPReceiver extends Thread {
 				
 				String msg = new String(data);
 				String threadname = Thread.currentThread().getName();
-				System.out.println("TCPReceiver got message " + msg + " threadname: " + threadname); // print the received message
+				//System.out.println("TCPReceiver got message " + msg + " threadname: " + threadname); // print the received message
 				System.out.println(); // empty line for readability.
 					
 				registry.TCPmessage(msg); // send the message to the registry.

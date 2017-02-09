@@ -3,11 +3,17 @@ package overlay;
  * This is the registry class. Here the registry will be created which keeps track of all messaging transmissions.
  */
 
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import Graph.Dijkstra;
@@ -16,6 +22,7 @@ import Graph.Vertex;
 import wireformat.LinkWeightsMessage;
 import wireformat.MessagingNodesListMessage;
 import wireformat.RegistryRegistrationResponseMessage;
+import wireformat.RegistryShortestPathListResponse;
 import wireformat.TaskInitiateMessage;
 
 
@@ -30,7 +37,7 @@ public class Registry implements Runnable {
 	private static Vertex newVertex; // Vertex that we will add to the overlay.
 	private static ArrayList<Vertex> vertices = new ArrayList<Vertex>(); // holds list of vertices that are being registered.
 	private static ArrayList<Socket> nodeSockets = new ArrayList<Socket>(); // holds all nodes that are registered in the registry.
-	
+	private static Dijkstra dijkstra = null; // this will be set later in the code. Important to find the shortest path.
 
 	
 	// Pair<String, Integer> is in the form of hostname, portnum for the nodes.
@@ -178,26 +185,55 @@ public class Registry implements Runnable {
 	}
 	
 	// handles messages sent to the Registry.
-	public static void NodeRequest(String request, String IPaddr, int portnum)
+	public static void NodeRequest(String[] splitMessage)
 	{
-		if(request.equals("REGISTER_REQUEST")) // MessagingNode sends a registration command.
+		if(splitMessage[0].equals("REGISTER_REQUEST")) // MessagingNode sends a registration command.
 		{
+			String IPaddr = splitMessage[1];
+			int portnum = Integer.parseInt(splitMessage[2]);
 			register(IPaddr, portnum); // register the node within the registry.
 		}
-		else if(request.equals("DEREGISTER_REQUEST"))
+		else if(splitMessage[0].equals("DEREGISTER_REQUEST"))
 		{
+			String IPaddr = splitMessage[1];
+			int portnum = Integer.parseInt(splitMessage[2]);
+			register(IPaddr, portnum); // register the node within the registry.
 			deregister(IPaddr, portnum); // remove the node from the registry. Node should send final report to registry as well before full disconnection.
+		}
+		else if(splitMessage[0].equals("SHORTEST_PATH_REQUEST"))
+		{
+			int sendingNodesPortnum = Integer.parseInt(splitMessage[1]); // get the portnum of the node that sent the message.
+			int shortestPathToNode = Integer.parseInt(splitMessage[2]); // get the portnum of the node we want the shortest path to.
+			
+			List<Vertex> shortestPath = dijkstra.getPathTo(shortestPathToNode); // have this list get 
+			RegistryShortestPathListResponse rsplr = new RegistryShortestPathListResponse();
+		
+			try 
+			{
+				byte[] msgToSend = rsplr.getShortestPathListMessage(shortestPath);
+				
+				// search through list of nodeSockets and find the matching portnum
+				for(int i = 0; i < nodeSockets.size(); i++)
+				{
+					if(nodeSockets.get(i).getPort() == sendingNodesPortnum) // find the node that requested the shorted path list.
+					{
+						send(nodeSockets.get(i), msgToSend); // send the shortest path list back to the node that requested it.
+					}
+				}
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.err.println("Registry caught error while making shortest path list response: " + e.getMessage());
+			} 
+			
 		}
 	}
 	
 	// message received from the TCPReceiver will be passed here for processing and sent to NodeRequest.
 	public void TCPmessage(String tcpMessage)
 	{
-		String[] tokens = tcpMessage.split(" "); // split message by spaces.
-		String request = tokens[0]; // token[0] holds the node request.
-		String IPaddr = tokens[1]; // token[1] holds the node's IP address.
-		int portnum = Integer.parseInt(tokens[2]); // token[2] holds the node's port number.
-		NodeRequest(request, IPaddr, portnum); // send the request along with the relative information to handled.
+		String[] splitMessage = tcpMessage.split("\n");
+		NodeRequest(splitMessage); // send the request along with the relative information to handled.
 	}
 	
 	// This will create edges between the created vertices and will assign weights in the process of doing that.
@@ -228,8 +264,7 @@ public class Registry implements Runnable {
 			}
 		}
 	}
-	
-	
+
 	
 	// takes in a split string array for the command. Important to note what is going on here.
 	public void userCommand(String[] command)
@@ -245,7 +280,7 @@ public class Registry implements Runnable {
 			buildEdgesandWeights(vertices); // build the edges with weights to all the vertices.
 				
 			//System.out.println("There are " + sortedVertices.size() + " vertices in the overlay.");
-			Dijkstra d = new Dijkstra(Overlay, vertices.get(0).getVertexPortNum()); // takes in the overlay and the first graph in the list.
+			dijkstra = new Dijkstra(Overlay, vertices.get(0).getVertexPortNum()); // takes in the overlay and the first graph in the list.
 			
 			int nodeCounter = 0; // tells the messaging node list which node it is working with.
 			for(int i = 0; i < vertices.size(); i++)
@@ -262,6 +297,7 @@ public class Registry implements Runnable {
 				} 
 				catch (IOException e) {
 					System.err.println("Registry caught error: " + e.getMessage()); // print the error.
+					e.printStackTrace();
 				}	
 			}
 		} 

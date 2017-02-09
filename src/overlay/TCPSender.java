@@ -25,7 +25,7 @@ public class TCPSender {
 		dataOut.flush(); // flush out the stream.
 		
 		String msg = new String(dataToSend);
-		System.out.println("sending data " + msg);
+		//System.out.println("sending data " + msg);
 	}
 	
 	public static void main(String[] args) {

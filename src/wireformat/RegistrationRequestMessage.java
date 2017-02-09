@@ -16,11 +16,11 @@ public class RegistrationRequestMessage {
 		ByteArrayOutputStream baOutStream = new ByteArrayOutputStream();
 		DataOutputStream dataOutput = new DataOutputStream(new BufferedOutputStream(baOutStream));
 		
-		dataOutput.writeBytes("REGISTER_REQUEST "); // ask the registry to register the node.
-		dataOutput.writeBytes(nodeSocket.getInetAddress().getHostAddress() + " ");
+		dataOutput.writeBytes("REGISTER_REQUEST\n"); // ask the registry to register the node.
+		dataOutput.writeBytes(nodeSocket.getInetAddress().getHostAddress() + "\n");
 		
 		String convertedPortnum = Integer.toString(portnum); // convert the portnum into a string to send to TCPReceiver.
-		dataOutput.writeBytes(convertedPortnum);
+		dataOutput.writeBytes(convertedPortnum + "\n");
 		
 		// clean up
 		dataOutput.flush(); // flush the stream.
