@@ -41,11 +41,8 @@ public class Edge implements Comparable<Edge> {
 	// returns the vertex neighbor along with the edge
 	public Vertex getNeighbor(Vertex current)
 	{
-		System.out.println("test 1");
-		System.out.println("in getNeighbor method now");
 		if(!(current.equals(one) || current.equals(two)))
 		{
-			System.out.println("test 2");
 			return null; //  vertex is itself. 
 		}
 		

@@ -40,7 +40,7 @@ public class TCPReceiver extends Thread {
 				String msg = new String(data);
 				String threadname = Thread.currentThread().getName();
 				//System.out.println("TCPReceiver got message " + msg + " threadname: " + threadname); // print the received message
-				System.out.println(); // empty line for readability.
+				//System.out.println(); // empty line for readability.
 					
 				registry.TCPmessage(msg); // send the message to the registry.
 				

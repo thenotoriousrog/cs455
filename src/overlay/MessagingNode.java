@@ -17,6 +17,8 @@ import wireformat.NodeDeregistrationRequestMessage;
 import wireformat.PayloadMessage;
 import wireformat.RegistrationRequestMessage;
 import wireformat.RequestShortestPathList;
+import wireformat.TaskCompleteMessage;
+import wireformat.TrafficSummaryMessage;
 
 // creates the structure of the messaging nodes.
 public class MessagingNode implements Node, Runnable {
@@ -25,6 +27,7 @@ public class MessagingNode implements Node, Runnable {
 	private static Socket clientSocket; // the node will retrieve data from this socket from clients.
 	private static int portNum = 0; // this will hold a random port number. 
 	private static String hostname = ""; // holds the hostname created from within the console.
+	private static String IP = ""; // holds the IPaddress of this node.
 	private static MessagingNode messagingNode; // an instance that will be sent to TCPNodeReceiver to help receive messages.
 	private static ArrayList<Pair<String, Integer>> otherNodes = null; // holds the list of other nodes.
 	ArrayList<Trio<Pair<String, Integer>, Pair<String, Integer>, Integer>> linkWeights = 
@@ -172,6 +175,7 @@ public class MessagingNode implements Node, Runnable {
 		
 		System.out.println("Link weights are received and processed. Ready to send messages."); // needed by HW documents.
 		
+		/*
 		// run through link weights and print out the details.
 		System.out.println("linkWeights size is: " + linkWeights.size());
 		for(int i = 0; i < linkWeights.size(); i++)
@@ -181,6 +185,7 @@ public class MessagingNode implements Node, Runnable {
 			
 			// the above will print node1Portnum node2Portnum weight for each. This will tell me if it is done correctly or not.
 		}
+		*/
 		
 	}
 	
@@ -320,16 +325,22 @@ public class MessagingNode implements Node, Runnable {
 			}
 		
 			numOfRounds--; // decrement 1 from number of rounds.
-			System.out.println("number of rounds remaining for node with portnum: " + portNum + " is: " + numOfRounds);
+			//System.out.println("number of rounds remaining for node with portnum: " + portNum + " is: " + numOfRounds);
 			
 		} // end while --> numOfRounds == 0, tell Registry that node has finished its task.
 				
+		//System.out.println("messaging node has finished its task");
 		// generate the TASK_COMPLETE message and send it to the registry.
+		TaskCompleteMessage tcm = new TaskCompleteMessage();
+		byte[] msgToSend = tcm.getTaskCompleteMessage(registrySocket.getInetAddress().getHostAddress(), portNum);
+		TCPSender sendME = new TCPSender(registrySocket);
+		sendME.sendData(msgToSend); // send to Registry telling it that this node has finished its task.
+		//System.out.println("messaging node has sent TASK_COMPLETE message to registry");
 		
 		// for now just want to make sure that all the nodes are getting the messaging as they are suppose to.
-		System.out.println(); // new line for readability.
-		System.out.println("Messaging node with portnum: " + portNum + " has finished its task!");
-		System.out.println(); // new line for readability.
+		//System.out.println(); // new line for readability.
+		//System.out.println("Messaging node with portnum: " + portNum + " has finished its task!");
+		//System.out.println(); // new line for readability.
 	} 
 	
 	// nodes start at nodes[1] and remember that it is IPaddr:portnum.
@@ -353,6 +364,15 @@ public class MessagingNode implements Node, Runnable {
 		}
 		setShortestPathList(shortestPathList);
 		startSendingMessagesHelper();
+	}
+	
+	// reset all traffic counters to zero.
+	public void resetFields()
+	{
+		updateReceiveTracker(0);
+		updateSendTracker(0);
+		updateSendSummation(0);
+		updateReceiveSummation(0);	
 	}
 	
 	// this will take in the messages that TCPNodeReceiver receives.
@@ -384,15 +404,16 @@ public class MessagingNode implements Node, Runnable {
 			numOfRounds = Integer.parseInt(splitLine[1]); // get the number of rounds that the messaging nodes must go for.
 			startSendingMessages(numOfRounds); // start sending messages for the number of rounds.
 		}
-		else if(splitMessage[0].equals("SHORTEST_PATH_LIST"))
+		else if(splitMessage[0].equals("SHORTEST_PATH_LIST")) // registry has sent this node the shortest path to its desired node.
 		{
 			// make a method that may or may not need to be synchronized, then go through it storing all the portnumbers.
 			processShortestPath(splitMessage); // takes in the string[] and constructs the shortest path that will be sent to the other nodes.
 		}
-		else if(splitMessage[0].equals("Payload"))
+		else if(splitMessage[0].equals("Payload")) // this node has received a paylod from another node.
 		{
 			// process the message and get the payload, then update the necessary fields.
 			
+			//System.out.println("messaging node has recieved a payload");
 			// process the payload, convert back to int.
 			int payloadReceived = Integer.parseInt(splitMessage[1]);
 			
@@ -405,6 +426,22 @@ public class MessagingNode implements Node, Runnable {
 			long sumReceiveSummation = getReceiveSummation(); // get the current receive summation.
 			sumReceiveSummation += payloadReceived;           // add received payload to current receive summation
 			updateReceiveSummation(sumReceiveSummation);      // update receiveSummation
+		}
+		else if(splitMessage[0].equals("PULL_TRAFFIC_SUMMARY")) // registry knows that this node has finished its task and wants a traffic summary.
+		{
+			// upon receipt of this message, the node must generate the traffic summary message
+			TrafficSummaryMessage tsm = new TrafficSummaryMessage();
+			TCPSender sendMe = new TCPSender(registrySocket);
+			int sent = getSendTracker();
+			long sentSum = getSendSummation();
+			int received = getReceiveTracker();
+			long receiveSum = getReceiveSummation();
+			int relayed = relayTracker;
+			byte[] msgToSend = tsm.getTrafficSummaryMessage(hostname, portNum, sent, sentSum, received, receiveSum, relayed); // create message with the correct data.
+			
+			sendMe.sendData(msgToSend); // send traffic summary to Registry.
+			
+			resetFields(); // after the messaging node sends its traffic summary it must return all its fields to 0;
 		}
 	}
 	
@@ -482,6 +519,7 @@ public class MessagingNode implements Node, Runnable {
 			InetAddress ip; 
 			ip = InetAddress.getLocalHost(); // get hostname
 			hostname = ip.getHostName();
+			IP = ip.getHostAddress(); // gets the actual IP address of this node.
 			portNum = serverSocket.getLocalPort(); // assign the port number that was assigned to serverSocket.
 			registerNode(registrySocket, portNum, hostname); // have messaging node get registered with the Registry.
 			

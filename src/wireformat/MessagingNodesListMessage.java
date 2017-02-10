@@ -14,16 +14,7 @@ public class MessagingNodesListMessage {
 	// also tells how many connections the messaging nodes must make.
 	// also gives which node we are working with so that we may be able to make a connection with said node.
 	public byte[] getNodeListBytes(ArrayList<Vertex> vertices, int nodeNum, int numOfConnections) throws IOException
-	{
-		
-		/*
-		 * IMPORTANT NOTE
-		 * My counter could be off causing mismatches in getting the correct node info. If so, check the nodeNum that is being sent in and make sure it is 
-		 * accurate. 
-		 * 
-		 * 
-		 */
-		
+	{	
 		byte[] marshalledBytes = null;
 		ByteArrayOutputStream baOutStream = new ByteArrayOutputStream();
 		DataOutputStream dataOutput = new DataOutputStream(new BufferedOutputStream(baOutStream));

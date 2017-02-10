@@ -21,6 +21,7 @@ import Graph.Graph;
 import Graph.Vertex;
 import wireformat.LinkWeightsMessage;
 import wireformat.MessagingNodesListMessage;
+import wireformat.PullTrafficSummaryMessage;
 import wireformat.RegistryRegistrationResponseMessage;
 import wireformat.RegistryShortestPathListResponse;
 import wireformat.TaskInitiateMessage;
@@ -38,7 +39,14 @@ public class Registry implements Runnable {
 	private static ArrayList<Vertex> vertices = new ArrayList<Vertex>(); // holds list of vertices that are being registered.
 	private static ArrayList<Socket> nodeSockets = new ArrayList<Socket>(); // holds all nodes that are registered in the registry.
 	private static Dijkstra dijkstra = null; // this will be set later in the code. Important to find the shortest path.
-
+	private static int taskCompleteCounter = 0; // keeps track of how many TASK_COMPLETE messages the Registry has received. 
+	private static int trafficReportCounter = 0; // keeps track of how many traffic reports are received.
+	
+	private static long grandSentTotal = 0; // holds grand total of all sent messages
+	private static long grandSentSumTotal = 0; // holds sum of all sent messages.
+	private static long grandReceivedTotal = 0; // holds grand total of all received messages.
+	private static long grandReceivedSumTotal = 0; // holds grand total of the summed received messages.
+	private static long grandRelayedTotal = 0; // holds grand total of all relayed messages.
 	
 	// Pair<String, Integer> is in the form of hostname, portnum for the nodes.
 	private static ArrayList<Pair<String, Integer>> registeredNodes = new ArrayList<Pair<String, Integer>>(); // an array list of the hostname/portnum node Pairs
@@ -184,6 +192,61 @@ public class Registry implements Runnable {
 		}
 	}
 	
+	// info starts at summary[1]. In charge of displaying and printing the entire summary in list format as seen on document last page.
+	public static void processTrafficSummary(String[] summary)
+	{
+		// NOTE: traffic report counter also acts as a node counter.
+		if(trafficReportCounter == 0)
+		{
+			trafficReportCounter++; // increment the traffic report counter.
+			System.out.println("		# of sent messages	|	# of received messages	|	Sum of sent messages	|	Sum of received messages	"
+					+ "|	# of relayed messages");
+		}
+		
+		// split the summary into the proper fields.
+		String[] splitSummary = summary[1].split(":");
+		String IPaddr = splitSummary[1]; // holds the ipaddress of this nodes traffic summary.
+		
+		splitSummary = summary[2].split(":");
+		int portnum = Integer.parseInt(splitSummary[1]);
+		
+		splitSummary = summary[3].split(":");
+		int sentMessages = Integer.parseInt(splitSummary[1]);
+		
+		splitSummary = summary[4].split(":");
+		long sentSum = Long.parseLong(splitSummary[1]);
+		
+		splitSummary = summary[5].split(":");
+		int receivedMessages = Integer.parseInt(splitSummary[1]);
+		
+		splitSummary = summary[6].split(":");
+		long receivedSum = Long.parseLong(splitSummary[1]);
+		
+		splitSummary = summary[7].split(":");
+		int relayedMessages = Integer.parseInt(splitSummary[1]);
+		
+		// print the traffic reported.
+		System.out.println("Node " + trafficReportCounter + "			|	" + sentMessages + "			|	" + receivedMessages + "			|	" 
+				+ sentSum + "			|	" + receivedSum + "  		  |	" + relayedMessages); 
+		
+		
+		// update grand totals
+		grandSentTotal += sentMessages;
+		grandSentSumTotal += sentSum;
+		grandReceivedTotal += receivedMessages;
+		grandReceivedSumTotal += receivedSum;
+		grandRelayedTotal += relayedMessages;
+		
+		if(trafficReportCounter == registeredNodes.size()) // we have all the nodes traffic summaries.
+		{
+			// print final traffic summary with the sum of all data.
+			System.out.println("Sum" + "	|			" + grandSentTotal + "			|	" + grandReceivedTotal + "			|	" 
+					+ grandSentSumTotal + "			|	" + grandReceivedSumTotal + "  		  |	" + grandRelayedTotal); 
+		}
+		
+		trafficReportCounter++; // increment traffic report counter for the next report that must come in.
+	}
+	
 	// handles messages sent to the Registry.
 	public static void NodeRequest(String[] splitMessage)
 	{
@@ -210,7 +273,6 @@ public class Registry implements Runnable {
 		
 			try 
 			{
-				System.out.println("test 1");
 				byte[] msgToSend = rsplr.getShortestPathListMessage(shortestPath);
 				
 				// search through list of nodeSockets and find the matching portnum
@@ -230,7 +292,60 @@ public class Registry implements Runnable {
 				e.printStackTrace();
 				System.err.println("Registry caught error while making shortest path list response: " + e.getMessage());
 			} 
+		}
+		else if(splitMessage[0].equals("TASK_COMPLETE")) // Node that sent this has completed it's task.
+		{
+			//System.out.println("Registry got taskComplete message");
 			
+			String nodeIPaddr = splitMessage[1]; // get the node's IP address
+			int nodePortnum = Integer.parseInt(splitMessage[2]); // get the node's portnum.
+			
+			// check if this message is registered within the registry
+			//if(isRegistered(nodePortnum, nodeIPaddr))
+			//{
+				taskCompleteCounter++; // increment task complete counter. 
+				
+				//System.out.println("Received: " + taskCompleteCounter + " messages");
+				if(taskCompleteCounter == registeredNodes.size())
+				{
+					// wait for around 15 seconds, generate and send the pull traffic summary message.
+					try 
+					{
+						System.out.println("Registry is waiting...");
+						Thread.sleep(15000); // have the thread sleep for 15 seconds before continuing with the getting the traffic summary.
+					} 
+					catch (InterruptedException e) {
+						System.err.println("Registry got interrupted while waiting: " + e.getMessage()); // alert that the thread was interrupted.
+						Thread.currentThread().interrupt(); // allow the thread to interrupt.
+						e.printStackTrace();
+					}
+					
+					// waiting time has finished, ask messaging nodes to send in their traffic reports.
+					PullTrafficSummaryMessage pts = new PullTrafficSummaryMessage();
+					try 
+					{
+						byte[] msgToSend = pts.getTrafficSummaryMessage();
+						
+						// loop through all nodes requesting their traffic summary
+						for(int i = 0; i < nodeSockets.size(); i++)
+						{
+							send(nodeSockets.get(i), msgToSend); // request Messaging Node to send in their traffic summary.
+						}
+					} 
+					catch (IOException e) {
+						System.err.println("Registry caught error while making Traffic Summary Message " + e.getMessage());
+						e.printStackTrace();
+					} 
+				}
+			//}
+			//else
+			//{
+				// do nothing, this node should not have sent anything.
+			//}
+		}
+		else if(splitMessage[0].equals("TRAFFIC_SUMMARY")) // registry has received the traffic summary from the messaging nodes.
+		{
+			processTrafficSummary(splitMessage); // send the traffic summary to be processed and printed out.
 		}
 	}
 	

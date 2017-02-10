@@ -51,7 +51,6 @@ public class Graph {
     // checks two vertices and a weight, then will return true if the edge does not exist.
     public boolean addEdge(Vertex one, Vertex two, int weight)
     {
-    	System.out.println("trying to add edge now.");
         if(one.equals(two))
         {
             return false;   
@@ -113,9 +112,7 @@ public class Graph {
     public void addVertex(Vertex vertex)
     {
     	// ** Registry will make sure node does not exist before we add it to the graph ** no need to check for this **
-    	vertices.put(vertex.convertToString(vertex.getVertexPortNum()), vertex); // add vertex to the graph.
-    	
-    	System.out.println("vertex was added! ");
+    	vertices.put(vertex.convertToString(vertex.getVertexPortNum()), vertex); // add vertex to the graph.	
     }
     
     // remove vertex from graph along with its corresponding Edge as well.

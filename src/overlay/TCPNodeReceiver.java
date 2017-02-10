@@ -36,8 +36,8 @@ public class TCPNodeReceiver extends Thread {
 				
 				String msg = new String(data);
 				String threadname = Thread.currentThread().getName();
-				System.out.println("TCPNodeReceiver got message " + msg + " threadname: " + threadname); // print the received message
-				System.out.println(); // empty line for readability.
+				//System.out.println("TCPNodeReceiver got message " + msg + " threadname: " + threadname); // print the received message
+				//System.out.println(); // empty line for readability.
 				
 				node.TCPNodeMessage(msg);
 				
