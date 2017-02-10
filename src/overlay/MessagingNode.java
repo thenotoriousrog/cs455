@@ -14,7 +14,9 @@ import java.util.Random;
 
 import Graph.Dijkstra;
 import wireformat.NodeDeregistrationRequestMessage;
+import wireformat.PayloadMessage;
 import wireformat.RegistrationRequestMessage;
+import wireformat.RequestShortestPathList;
 
 // creates the structure of the messaging nodes.
 public class MessagingNode implements Node, Runnable {
@@ -29,7 +31,10 @@ public class MessagingNode implements Node, Runnable {
 			new ArrayList<Trio<Pair<String, Integer>, Pair<String, Integer>, Integer>>(); // this will hold the link weights between this node and it's connected node.
 	private static Socket registrySocket = null; // socket that we will use to communicate with the registry.
 	ArrayList<Pair<String, Integer>> shortestPathList = null; // holds the shortest path list sent from the registry.
+	ArrayList<Socket> nodeSockets = null; // holds a list of all nodes that we are connected to.
 	
+	
+	private static int numOfRounds = 0; // holds the number of rounds that must be used.
 	private static int sendTracker = 0; // keeps track of all the messages that this node sends. This is held in main memory, not cached.
 	private static int receiveTracker = 0; // keeps track of all the messages that this node receives. This is held in main memory, not cached.
 	private static int relayTracker = 0; // keeps track of all the messages that this node relays to another node
@@ -99,7 +104,7 @@ public class MessagingNode implements Node, Runnable {
 	// start making connections with the other nodes and displays message to console upon success.
 	public void makeConnections(ArrayList<Pair<String, Integer>> nodesToConnectTo, int numOfConnections)
 	{
-		ArrayList<Socket> nodeSockets = new ArrayList<Socket>(); // holds lists of Sockets to make connections to.
+		nodeSockets = new ArrayList<Socket>(); // holds lists of Sockets to make connections to.
 				
 		// loop through list of nodes.
 		for(int i = 0; i < nodesToConnectTo.size(); i++)
@@ -146,7 +151,6 @@ public class MessagingNode implements Node, Runnable {
 				otherNodePortnum = Integer.parseInt(node2Info[1]); // get portnum of another node.
 				
 				// search through list of nodes storing the match into the new list of link weights.
-				System.out.println("otherNodes size is: " + otherNodes.size()); // for testing.
 				for(int j = 0; j < otherNodes.size(); j++)
 				{
 					if(otherNodePortnum == otherNodes.get(j).getSecond()) // we have found a match.
@@ -185,19 +189,49 @@ public class MessagingNode implements Node, Runnable {
 		sendTracker = newSendTracker; // updated information.
 	}
 	
+	public int getSendTracker()
+	{
+		return sendTracker;
+	}
+	
 	public synchronized void updateReceiveTracker(int newReceiveTracker)
 	{
 		receiveTracker = newReceiveTracker;
 	}
 	
-	public synchronized void updateSendSummation(int newSendSummation)
+	public int getReceiveTracker()
+	{
+		return receiveTracker;
+	}
+	
+	public synchronized void updateSendSummation(long newSendSummation)
 	{
 		sendSummation = newSendSummation;
 	}
 	
-	public synchronized void updateReceiveSummation(int newReceiveSummation)
+	public long getSendSummation()
+	{
+		return sendSummation;
+	}
+	
+	public synchronized void updateReceiveSummation(long newReceiveSummation)
 	{
 		receiveSummation = newReceiveSummation;
+	}
+	
+	public long getReceiveSummation()
+	{
+		return receiveSummation;
+	}
+	
+	public synchronized void setShortestPathList(ArrayList<Pair<String, Integer>> list)
+	{
+		shortestPathList = list; // update the list.
+	}
+	
+	public synchronized ArrayList<Pair<String, Integer>> getShortestPathList()
+	{
+		return shortestPathList;
 	}
 	
 	private static int getPayload()
@@ -209,6 +243,34 @@ public class MessagingNode implements Node, Runnable {
 		Random rn = new Random();
 		int randomInt = rn.nextInt(); // 
 		return randomInt; // hoping this will create the large number that we want to use.
+	}
+	
+	// may be able to remove this method.
+	// this method will actually be in charge of sending out the data out to the other nodes.
+	private void startSendingMessagesHelper() throws IOException
+	{
+		ArrayList<Pair<String, Integer>> pathList = getShortestPathList(); // get the path send from registry.
+		
+		
+		
+		
+		
+		/* for testing purposes only.
+		System.out.println("list has size: " + pathList.size());
+		
+		// loop through each list item and compare with the current nodes list.
+		for(int i = 0; i < pathList.size(); i++)
+		{
+			System.out.println("shortest path in order of portnum: " + pathList.get(i).getSecond());
+		}
+		
+		for(int i = 0; i < otherNodes.size(); i++)
+		{
+			System.out.println("list of other nodes in term of portnum: " + otherNodes.get(i).getSecond());
+		}
+		*/
+		
+		
 	}
 	
 	// starts sending messages to random nodes based on the number of rounds (one node selected per round)
@@ -224,25 +286,63 @@ public class MessagingNode implements Node, Runnable {
 			randomNode = rn.nextInt(otherNodes.size()); // picks a random node to select in otherNodes.
 			Payload = getPayload(); // get the payload to send to another node. This is stored into main memory.
 			
-			// request the registry to generate the shortest path to this node
+			/* don't need this for now, that was for sending shortest path list.
+			RequestShortestPathList rspl = new RequestShortestPathList();
+			TCPSender sendThis = new TCPSender(registrySocket); // send this message back to the registry.
 			
+			byte[] msgToSend = rspl.getShortestPathRequestMessage(portNum, otherNodes.get(randomNode).getSecond());
+			sendThis.sendData(msgToSend); // request the shortest path from Registry.
+			*/
+			//System.out.println("we want shortest path to this portnum: " + otherNodes.get(randomNode).getSecond());
 			
+			// start sending messaging node the Payload
+			for(int i = 0; i < nodeSockets.size(); i++)
+			{
+				if(nodeSockets.get(i).getPort() == otherNodes.get(randomNode).getSecond()) // search for node that I am connected to.
+				{
+					TCPSender sendToNode = new TCPSender(nodeSockets.get(i));
+					PayloadMessage pm = new PayloadMessage();
+					
+					// send Payload
+					byte[] payloadToSend = pm.getPayloadMessage(Payload);
+					sendToNode.sendData(payloadToSend); // send the payload to the node that we have picked randomly.
+					
+					// increment and update SendTracker
+					int incrementSendTracker = getSendTracker(); // get the sendTracker.
+					incrementSendTracker++;                      // increment the send tracker
+					updateSendTracker(incrementSendTracker);     // send the update to be synchronized.
+					
+					// sum and update sendSummation
+					long sumSendSummation = getSendSummation(); // get the send summation.
+					sumSendSummation += Payload;                // add payload to the current summation.
+					updateSendSummation(sumSendSummation);      // send the update to be synchronized.
+				}
+			}
+		
 			numOfRounds--; // decrement 1 from number of rounds.
+			System.out.println("number of rounds remaining for node with portnum: " + portNum + " is: " + numOfRounds);
 			
-			// after I am confident that the shortest path works correctly, I must start sending the data correctly to the other nodes.
-		}
+		} // end while --> numOfRounds == 0, tell Registry that node has finished its task.
 				
-		// once numOfRounds == 0 we must send the TASK_COMPLETE message to the registry.	
-	}
+		// generate the TASK_COMPLETE message and send it to the registry.
+		
+		// for now just want to make sure that all the nodes are getting the messaging as they are suppose to.
+		System.out.println(); // new line for readability.
+		System.out.println("Messaging node with portnum: " + portNum + " has finished its task!");
+		System.out.println(); // new line for readability.
+	} 
 	
 	// nodes start at nodes[1] and remember that it is IPaddr:portnum.
 	// may need to make this method synchronized.
-	public void processShortestPath(String[] nodes)
+	public synchronized void processShortestPath(String[] nodes) throws IOException
 	{
 		shortestPathList = new ArrayList<Pair<String, Integer>>();
 		
+		System.out.println("messaging nodes are working on setting the shortest path list.");
+		
 		for(int i = 1; i < nodes.length; i++)
 		{
+			System.out.println("storing data now.");
 			String[] splitLine = nodes[i].split(":"); // splitLine[0] == IPaddr, splitLine[1] == portnum
 			String IPaddr = splitLine[0];
 			int portnum = Integer.parseInt(splitLine[1]);
@@ -251,10 +351,12 @@ public class MessagingNode implements Node, Runnable {
 			shortestPathList.add(newNode); // add the node into the shortest path list. 
 			// NOTE: I may want to also make this synchronized.
 		}
+		setShortestPathList(shortestPathList);
+		startSendingMessagesHelper();
 	}
 	
 	// this will take in the messages that TCPNodeReceiver receives.
-	public void TCPNodeMessage(String message) throws IOException
+	public void TCPNodeMessage(String message) throws IOException, InterruptedException
 	{
 		//System.out.println("MessagingNode got message: " + message + " ~from Registry.");
 		
@@ -279,13 +381,30 @@ public class MessagingNode implements Node, Runnable {
 		else if(splitMessage[0].equals("TASK_INITIATE")) // registry is telling the nodes to begin sending data and payload.
 		{
 			String[] splitLine = splitMessage[1].split(" ");
-			int numOfRounds = Integer.parseInt(splitLine[1]); // get the number of rounds that the messaging nodes must go for.
+			numOfRounds = Integer.parseInt(splitLine[1]); // get the number of rounds that the messaging nodes must go for.
 			startSendingMessages(numOfRounds); // start sending messages for the number of rounds.
 		}
 		else if(splitMessage[0].equals("SHORTEST_PATH_LIST"))
 		{
 			// make a method that may or may not need to be synchronized, then go through it storing all the portnumbers.
 			processShortestPath(splitMessage); // takes in the string[] and constructs the shortest path that will be sent to the other nodes.
+		}
+		else if(splitMessage[0].equals("Payload"))
+		{
+			// process the message and get the payload, then update the necessary fields.
+			
+			// process the payload, convert back to int.
+			int payloadReceived = Integer.parseInt(splitMessage[1]);
+			
+			// payload received, // update receiveTracker
+			int incrementReceiveTracker = getReceiveTracker(); // get the current receive tracker.
+			incrementReceiveTracker++; // increment the receiveTracker
+			updateReceiveTracker(incrementReceiveTracker); // update the receive tracker.
+			
+			// sum and update receiveSummation
+			long sumReceiveSummation = getReceiveSummation(); // get the current receive summation.
+			sumReceiveSummation += payloadReceived;           // add received payload to current receive summation
+			updateReceiveSummation(sumReceiveSummation);      // update receiveSummation
 		}
 	}
 	

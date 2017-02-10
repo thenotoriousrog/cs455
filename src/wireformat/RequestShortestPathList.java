@@ -14,12 +14,12 @@ public class RequestShortestPathList {
 		ByteArrayOutputStream baOutStream = new ByteArrayOutputStream();
 		DataOutputStream dataOutput = new DataOutputStream(new BufferedOutputStream(baOutStream));
 		
-		dataOutput.writeBytes("REQUEST_SHORTEST_PATH\n");
+		dataOutput.writeBytes("SHORTEST_PATH_REQUEST\n");
 		String convertedPortnum = Integer.toString(currentPortnum);
 		String convertedTarget = Integer.toString(targetPortnum);
 		
-		dataOutput.writeBytes(convertedPortnum); // write current nodes portnum
-		dataOutput.writeBytes(convertedTarget); // write target portnum.
+		dataOutput.writeBytes(convertedPortnum + "\n"); // write current nodes portnum
+		dataOutput.writeBytes(convertedTarget + "\n"); // write target portnum.
 		
 		// clean up
 		dataOutput.flush();

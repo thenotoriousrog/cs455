@@ -210,13 +210,18 @@ public class Registry implements Runnable {
 		
 			try 
 			{
+				System.out.println("test 1");
 				byte[] msgToSend = rsplr.getShortestPathListMessage(shortestPath);
 				
 				// search through list of nodeSockets and find the matching portnum
 				for(int i = 0; i < nodeSockets.size(); i++)
 				{
+					//System.out.println("checking node socket: " + nodeSockets.get(i).getPort());
+					//System.out.println("check port number: " + sendingNodesPortnum);
+					
 					if(nodeSockets.get(i).getPort() == sendingNodesPortnum) // find the node that requested the shorted path list.
 					{
+						//System.out.println("sent the shortest path request.");
 						send(nodeSockets.get(i), msgToSend); // send the shortest path list back to the node that requested it.
 					}
 				}

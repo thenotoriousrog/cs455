@@ -42,11 +42,14 @@ public class TCPNodeReceiver extends Thread {
 				node.TCPNodeMessage(msg);
 				
 			} catch(SocketException se) {
-				System.out.println(se.getMessage());
+				System.err.println(se.getMessage());
 				break; // if socket fails, we must break the loop.
 			} catch(IOException ioe) {
-				System.out.println(ioe.getMessage());
+				System.err.println(ioe.getMessage());
 				break; // if something fails, we must break the loop.
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 	}
